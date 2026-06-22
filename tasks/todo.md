@@ -22,9 +22,9 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 ## Phase 4 — .NET core constructs
 - [x] Task 9 · entity/field/sourceOfTruth/concurrency → EF entity (M)
 - [x] Task 10 · type/enum → record/enum (S)
-- [ ] Task 11 · event/emits/on → record + pub/sub stub + outbox (M)
-- [ ] Task 12 · auth (roles/ownership/scopes) → guard iskeleti (S)
-- [ ] ▸ Checkpoint: .NET core (Go spike'a hazır)
+- [x] Task 11 · event/emits/on → record + pub/sub stub + outbox (M)
+- [x] Task 12 · auth (roles/ownership/scopes) → guard iskeleti (S)
+- [x] ▸ Checkpoint: .NET core (Go spike'a hazır)
 
 ## Phase 5 — Go spike (SEAM GATE)
 - [ ] Task 13 · Go emitter, Phase 2–4 construct'ları, aynı GM (L→dilimle)

@@ -85,6 +85,22 @@ public class EmitTests
     }
 
     [Fact]
+    public void Event_record_bus_and_auth_metadata_emitted()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
+            var ev = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Events.g.cs"));
+            Assert.Contains("public sealed record InvoiceCreated(string InvoiceId, Money Amount);", ev);
+            Assert.True(File.Exists(Path.Combine(dir, "src", "EventBus.g.cs")));
+            var auth = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Auth.g.cs"));
+            Assert.Contains("RequiredRoles = [\"Clerk\"]", auth);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();

@@ -26,6 +26,9 @@ public static class DotnetEmitter
         foreach (var t in gm.Types) report.Realized(t.Kind, t.Id);
         foreach (var e in gm.Entities) report.Realized("entity", e.Id);
         if (gm.Entities.Count > 0) WriteAlways(Path.Combine(src, "AppDbContext.g.cs"), DbContextFile(gm));
+        if (gm.Events.Count > 0) WriteAlways(Path.Combine(src, "EventBus.g.cs"), EventBus());
+        foreach (var ev in gm.Events) report.Realized("event", ev.Id);
+        foreach (var s in gm.Subscriptions) report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
 
         foreach (var module in gm.Modules)
         {
@@ -34,6 +37,8 @@ public static class DotnetEmitter
 
             var types = gm.Types.Where(t => t.Module == module.Name).ToList();
             var entities = gm.Entities.Where(e => e.Module == module.Name).ToList();
+            var events = gm.Events.Where(e => e.Module == module.Name).ToList();
+            if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events));
             if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types));
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities));
             foreach (var e in entities)
@@ -48,6 +53,9 @@ public static class DotnetEmitter
                 WriteIfAbsent(Path.Combine(dir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
                 var guards = GuardsFile(module.Name, op, report);
                 if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
+                var auth = AuthFile(module.Name, op, report);
+                if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
+                foreach (var ev in op.Op.Emits) report.Realized("emits", $"{op.Id}->{ev}");
                 report.Realized("operation", op.Id);
             }
         }
@@ -244,6 +252,63 @@ public static class DotnetEmitter
 
     static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
+    // ── event / emits / on (Task 11) ─────────────────────────────────────
+    static string EventsFile(string module, List<EventJson> events)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"namespace {Root}.{module};\n\n");
+        foreach (var e in events)
+        {
+            var props = string.Join(", ", e.Payload.Select(f => $"{Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)}"));
+            sb.Append($"public sealed record {e.Id}({props});\n\n");
+        }
+        return sb.ToString();
+    }
+
+    static string EventBus() =>
+        $$"""
+        namespace {{Root}};
+
+        // cross-module yayın seam'i. ponytail: outbox/broker/ack/retry insan+altyapı (§8 event taşıma).
+        public interface IEventBus { Task PublishAsync(object @event, CancellationToken ct = default); }
+
+        public sealed class OutboxEventBus : IEventBus
+        {
+            public Task PublishAsync(object @event, CancellationToken ct = default)
+                => throw new NotImplementedException("outbox: event taşıma doldurulacak");
+        }
+
+        """;
+
+    // ── auth iskeleti (Task 12) — roles/ownership/scopes ──────────────────
+    static string? AuthFile(string module, GmOperation op, BuildReport report)
+    {
+        var o = op.Op;
+        if (o.Roles.Count == 0 && o.Scopes.Count == 0 && o.Ownership is null) return null;
+
+        if (o.Roles.Count > 0) report.Realized("roles", op.Id);
+        if (o.Scopes.Count > 0) report.Realized("scopes", op.Id);
+        if (o.Ownership is not null) report.Realized("ownership", op.Id);
+
+        var roles = string.Join(", ", o.Roles.Select(r => $"\"{Escape(r)}\""));
+        var scopes = string.Join(", ", o.Scopes.Select(s => $"\"{Escape(s)}\""));
+        var ownership = o.Ownership is null ? "null" : $"\"{Escape(o.Ownership)}\"";
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // authz iskeleti (roles+scopes AND, ownership row-level). ponytail: meta + seam;
+            // gerçek claim/row-level kontrol insan/runtime.
+            public partial class {{op.Id}}Handler
+            {
+                public static readonly string[] RequiredRoles = [{{roles}}];
+                public static readonly string[] RequiredScopes = [{{scopes}}];
+                public const string? Ownership = {{ownership}};
+            }
+
+            """;
+    }
+
     static string RequestName(GmOperation op) => op.IsCommand ? $"{op.Id}Command" : $"{op.Id}Query";
 
     static string OperationFile(string module, GmOperation op)
@@ -297,6 +362,8 @@ public static class DotnetEmitter
         var di = new StringBuilder();
         if (gm.Entities.Count > 0)
             di.Append("builder.Services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
+        if (gm.Events.Count > 0)
+            di.Append("builder.Services.AddScoped<IEventBus, OutboxEventBus>();\n");
         var maps = new StringBuilder();
         foreach (var op in gm.Operations)
         {
