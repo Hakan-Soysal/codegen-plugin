@@ -101,6 +101,21 @@ public class EmitTests
     }
 
     [Fact]
+    public void Paginated_query_returns_page_and_takes_cursor_size()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.g.cs"));
+            Assert.Contains("Page<Invoice>", f);
+            Assert.Contains("string? Cursor, int Size", f);
+            Assert.Contains("ORDER BY CreatedAt desc", f);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();

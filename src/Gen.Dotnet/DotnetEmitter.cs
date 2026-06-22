@@ -56,6 +56,7 @@ public static class DotnetEmitter
                 var auth = AuthFile(module.Name, op, report);
                 if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
                 foreach (var ev in op.Op.Emits) report.Realized("emits", $"{op.Id}->{ev}");
+                if (op.Op.Pagination is not null) { report.Realized("pagination", op.Id); report.Policy("cursor-token", "opaque (generator-policy)"); }
                 report.Realized("operation", op.Id);
             }
         }
@@ -96,6 +97,9 @@ public static class DotnetEmitter
         public sealed record NotValid<T>(IReadOnlyDictionary<string, string> Errors) : Result<T>;
         public sealed record NotProcessable<T>(string Code, string Message) : Result<T>;
         public sealed record ServerError<T>(string Message) : Result<T>;
+
+        // pagination zarfı (cursor-token kodlaması = generator-policy / §8).
+        public sealed record Page<T>(IReadOnlyList<T> Items, string? NextCursor);
 
         """;
 
@@ -330,19 +334,34 @@ public static class DotnetEmitter
 
     static string RequestName(GmOperation op) => op.IsCommand ? $"{op.Id}Command" : $"{op.Id}Query";
 
+    // pagination → dönüş Page<T>; istek param'larına opak cursor + size eklenir (cursor kodlaması = §8 policy).
+    static string ReturnType(GmOperation op)
+    {
+        var ret = Naming.Type(op.Op.Signature.Returns, false);
+        return op.Op.Pagination is not null ? $"Page<{ret}>" : ret;
+    }
+
+    static string RequestFields(GmOperation op)
+    {
+        var fields = op.Op.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {Naming.Pascal(p.Name)}").ToList();
+        if (op.Op.Pagination is not null) { fields.Add("string? Cursor"); fields.Add("int Size"); }
+        return string.Join(", ", fields);
+    }
+
     static string OperationFile(string module, GmOperation op)
     {
         var req = RequestName(op);
-        var ret = Naming.Type(op.Op.Signature.Returns, false);
-        var ps = op.Op.Signature.Params;
-        var reqParams = string.Join(", ", ps.Select(p => $"{Naming.Type(p.Type, p.Collection)} {Naming.Pascal(p.Name)}"));
+        var ret = ReturnType(op);
+        var pageComment = op.Op.Pagination is { } p
+            ? $"\n// pagination keyset: ORDER BY {string.Join(", ", p.Keys.Select(k => $"{Naming.Pascal(k.Field)} {k.Direction}"))} (keyset/offset + cursor-token = generator-policy)"
+            : "";
         return
             $$"""
             using {{Root}};
 
             namespace {{Root}}.{{module}};
-
-            public sealed record {{req}}({{reqParams}});
+            {{pageComment}}
+            public sealed record {{req}}({{RequestFields(op)}});
 
             public partial class {{op.Id}}Handler
             {
@@ -356,7 +375,7 @@ public static class DotnetEmitter
     static string LogicFile(string module, GmOperation op)
     {
         var req = RequestName(op);
-        var ret = Naming.Type(op.Op.Signature.Returns, false);
+        var ret = ReturnType(op);
         return
             $$"""
             using {{Root}};
@@ -415,8 +434,15 @@ public static class DotnetEmitter
 
         // route param'larından request kur (ad eşleşmesi route token = signature param).
         var routeParams = routeArg?.Params ?? new();
-        var lambdaParams = string.Join("", routeParams.Select(p => $"string {p}, "));
-        var ctor = $"new {req}({string.Join(", ", routeParams)})";
+        var lambdaList = routeParams.Select(p => $"string {p}").ToList();
+        var ctorArgs = routeParams.ToList();
+        if (op.Op.Pagination is not null)   // paginated GET → cursor/size query-string'den
+        {
+            lambdaList.Add("string? cursor"); lambdaList.Add("int size");
+            ctorArgs.Add("cursor"); ctorArgs.Add("size");
+        }
+        var lambdaParams = lambdaList.Count > 0 ? string.Join(", ", lambdaList) + ", " : "";
+        var ctor = $"new {req}({string.Join(", ", ctorArgs)})";
         return $"app.{verb}(\"{route}\", async ({lambdaParams}{op.Id}Handler handler, CancellationToken ct) => ResultHttp.ToHttp(await handler.ExecuteAsync({ctor}, ct)));\n";
     }
 }

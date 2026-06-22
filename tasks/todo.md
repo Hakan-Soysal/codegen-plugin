@@ -36,7 +36,7 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [~] Task 16 · generation-model.schema.json — ERTELENDI (GM serialize edilmiyor; C# record = kontrat)
 
 ## Phase 7 — .NET long-tail
-- [ ] Task 17 · pagination (S)
+- [x] Task 17 · pagination (S)
 - [ ] Task 18 · calls + compensate → saga iskeleti (M)
 - [ ] Task 19 · idempotent → dedup konvansiyonu (S)
 - [ ] Task 20 · passthrough prelude'lar (@http/@trigger/@crypto/@audit/@sensitivity/@metric) (M)
