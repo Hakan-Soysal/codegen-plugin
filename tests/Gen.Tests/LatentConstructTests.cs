@@ -159,6 +159,22 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── visibility (@internal) → public route gate ────────────────────────
+    [Fact]
+    public void Internal_visibility_suppresses_public_route()
+    {
+        var (report, dir, _) = EmitMut(m =>
+            WithOp(m, Op(m, "GetInvoice") with { Visibility = "internal" }));   // serving korunur, route DÜŞMELİ
+        try
+        {
+            var prog = File.ReadAllText(Path.Combine(dir, "Program.cs"));
+            Assert.DoesNotContain("\"/invoices/{id}\"", prog);   // internal GetInvoice → route YOK
+            Assert.Contains("\"/invoices\"", prog);              // exposed CreateInvoice/ListInvoices → route VAR
+            Assert.True(report.Covers("visibility", "GetInvoice"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── D2 — external BoundaryOp serving + validation (INV-4) ─────────────
     [Fact]
     public void Boundary_op_serving_and_caller_validation_emitted()

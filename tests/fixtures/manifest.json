@@ -189,7 +189,8 @@
         ] },
         { "id": "InvoiceStatus", "module": "Billing", "kind": "enum", "values": ["Draft", "Issued", "Paid"] },
         { "id": "AuditMeta", "module": "Ops", "kind": "composite", "fields": [
-            { "name": "source", "type": "String", "collection": false, "ext": [ { "ns": "sensitivity", "name": "tag", "args": {} } ] }
+            { "name": "source", "type": "String", "collection": false, "ext": [ { "ns": "sensitivity", "name": "tag", "args": {} } ] },
+            { "name": "labels", "type": "String", "collection": true }
         ], "ext": [ { "ns": "schema", "name": "versioned", "args": {} } ] },
         { "id": "AuditKind", "module": "Ops", "kind": "enum", "values": ["Read", "Write"] }
     ],

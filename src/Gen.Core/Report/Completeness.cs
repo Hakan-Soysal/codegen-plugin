@@ -15,6 +15,8 @@ public static class Completeness
 
         // N/A (build-time türev/girdi; emit edilebilir construct değil): standalone/contract/import/rolemap/
         // extension-decl/realizes (join), access (→ IsCommand + DbSet türevi), pureTechnical (rolemap türevi).
+        // N/A (manifest KATMANINDA düşer → adaptör girdisinde YOK): returnAnnotations (manifest yalnız returns.name
+        // emit eder), emits-target ConsumerOpRef (Emits = string[]; hedef manifest'te taşınmaz). Adaptör bunları göremez.
         foreach (var d in m.Deployables) { x.Add(("deployable", d.Name)); AddExt(x, d.Ext, d.Name); }
         foreach (var mod in m.Modules) { x.Add(("module", mod.Name)); AddExt(x, mod.Ext, mod.Name); }
         foreach (var e in m.Errors) x.Add(("error", e.Id));
