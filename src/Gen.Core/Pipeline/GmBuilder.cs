@@ -27,6 +27,14 @@ public static class GmBuilder
                     if (!ents.ContainsKey(rid))
                         throw new JoinError($"entity '{e.Id}' realizes '{rid}' operations.json'da yok");
 
+        var env = new TypeEnv(
+            OpParams: m.Operations.ToDictionary(
+                o => o.Id,
+                o => (IReadOnlyDictionary<string, string>)o.Signature.Params.ToDictionary(p => p.Name, p => p.Type)),
+            EntityFields: m.Entities.ToDictionary(
+                e => e.Id,
+                e => (IReadOnlyDictionary<string, string>)e.Fields.ToDictionary(f => f.Name, f => f.Type)));
+
         return new GenerationModel(
             Mode: m.Mode,
             Modules: m.Modules.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
@@ -37,7 +45,8 @@ public static class GmBuilder
             Subscriptions: m.Subscriptions
                 .OrderBy(x => x.Event.Module, StringComparer.Ordinal).ThenBy(x => x.Event.Name, StringComparer.Ordinal)
                 .ThenBy(x => x.Consumer.Op, StringComparer.Ordinal).ToList(),
-            Errors: m.Errors.OrderBy(x => x.Id, StringComparer.Ordinal).ToList());
+            Errors: m.Errors.OrderBy(x => x.Id, StringComparer.Ordinal).ToList(),
+            Env: env);
     }
 
     static GmOperation BuildOp(OperationJson o, bool linked, Dictionary<string, ContractOp> contractOps)

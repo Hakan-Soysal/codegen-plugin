@@ -1,41 +1,47 @@
 using Gen.Core;
 using Gen.Core.Model;
-using Gen.Dotnet;
+using Gen.Core.Predicate;
 
 namespace Gen.Tests;
 
-public class ExprEmitTests
+public class ExprBuildTests
 {
     static ExprNode P(string json) => Json.Parse<ExprNode>(json);
+    static string Expr(string json) => ExprBuild.Build(P(json)).Expr;
 
     [Fact]
-    public void Cmp_path_vs_number()
-        => Assert.Equal("(request.amount > 0)", ExprEmit.Emit(P("""{"node":"cmp","op":">","left":{"path":["amount"]},"right":{"kind":"number","value":0}}""")));
+    public void Cmp_path_vs_number_uses_typed_input()
+        => Assert.Equal("(input.Amount > 0)", Expr("""{"node":"cmp","op":">","left":{"path":["amount"]},"right":{"kind":"number","value":0}}"""));
 
     [Fact]
-    public void Resource_and_actor_roots()
+    public void Resource_path_becomes_collision_safe_input_field()
     {
-        Assert.Equal("(request.amount <= resource.creditLimit)",
-            ExprEmit.Emit(P("""{"node":"cmp","op":"<=","left":{"path":["amount"]},"right":{"path":["resource","creditLimit"]}}""")));
-        Assert.Equal("(actor.id == request.ownerId)",
-            ExprEmit.Emit(P("""{"node":"cmp","op":"=","left":{"path":["actor","id"]},"right":{"path":["ownerId"]}}""")));
+        var (expr, paths) = ExprBuild.Build(P("""{"node":"cmp","op":"<=","left":{"path":["amount"]},"right":{"path":["resource","creditLimit"]}}"""));
+        Assert.Equal("(input.Amount <= input.ResourceCreditLimit)", expr);
+        Assert.Equal(2, paths.Count);
     }
 
     [Fact]
-    public void And_or_nesting_and_eq_mapping()
-        => Assert.Equal("((request.a == 1) && (request.b || request.c))",
-            ExprEmit.Emit(P("""{"node":"and","left":{"node":"cmp","op":"=","left":{"path":["a"]},"right":{"kind":"number","value":1}},"right":{"node":"or","left":{"path":["b"]},"right":{"path":["c"]}}}""")));
+    public void And_or_eq_mapping()
+        => Assert.Equal("((input.A == 1) && (input.B || input.C))",
+            Expr("""{"node":"and","left":{"node":"cmp","op":"=","left":{"path":["a"]},"right":{"kind":"number","value":1}},"right":{"node":"or","left":{"path":["b"]},"right":{"path":["c"]}}}"""));
 
     [Fact]
-    public void Invariant_uses_entity_root()
-        => Assert.Equal("(entity.amount >= 0)",
-            ExprEmit.Emit(P("""{"node":"cmp","op":">=","left":{"path":["amount"]},"right":{"kind":"number","value":0}}"""), "entity"));
+    public void Distinct_paths_collected_once()
+    {
+        var (_, paths) = ExprBuild.Build(P("""{"node":"and","left":{"node":"cmp","op":">","left":{"path":["x"]},"right":{"kind":"number","value":0}},"right":{"node":"cmp","op":"<","left":{"path":["x"]},"right":{"kind":"number","value":9}}}"""));
+        Assert.Single(paths);   // x bir kez
+    }
 
     [Fact]
     public void Unsupported_nodes_throw()
     {
-        Assert.Throws<UnsupportedConstruct>(() => ExprEmit.Emit(P("""{"node":"agg","fn":"sum","path":["lines","total"]}""")));
-        Assert.Throws<UnsupportedConstruct>(() => ExprEmit.Emit(P("""{"node":"call","name":"now","args":[]}""")));
-        Assert.Throws<UnsupportedConstruct>(() => ExprEmit.Emit(P("""{"kind":"duration","value":30,"unit":"day","text":"30 days"}""")));
+        Assert.Throws<UnsupportedConstruct>(() => ExprBuild.Build(P("""{"node":"agg","fn":"sum","path":["lines","total"]}""")));
+        Assert.Throws<UnsupportedConstruct>(() => ExprBuild.Build(P("""{"node":"call","name":"now","args":[]}""")));
+        Assert.Throws<UnsupportedConstruct>(() => ExprBuild.Build(P("""{"kind":"duration","value":30,"unit":"day","text":"30 days"}""")));
     }
+
+    [Fact]
+    public void PropName_is_pascal_join()
+        => Assert.Equal("ResourceCreditLimit", ExprBuild.PropName(new[] { "resource", "creditLimit" }));
 }

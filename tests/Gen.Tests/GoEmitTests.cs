@@ -56,12 +56,19 @@ public class GoEmitTests
     }
 
     [Fact]
-    public void Predicates_are_reported_unsupported_in_go()
+    public void Predicates_are_typed_and_realized_no_dynamic()
     {
-        var report = new BuildReport();
-        GoEmitter.Emit(Gm(), TempDirAndForget(), report);
-        Assert.Contains(report.Entries, e => e.Construct == "Validation" && e.Status == ConstructStatus.Unsupported);
+        var dir = TempDir();
+        try
+        {
+            var report = new BuildReport();
+            GoEmitter.Emit(Gm(), dir, report);
+            // tipli predicate: stub değil, gerçek tipli Go + input struct
+            var guards = File.ReadAllText(Path.Combine(dir, "createinvoice_guards.g.go"));
+            Assert.Contains("input.Amount > 0", guards);
+            Assert.Contains("type CreateInvoiceValidation0Input struct", guards);
+            Assert.Contains(report.Entries, e => e.Construct == "validation" && e.Status == ConstructStatus.Realized);
+        }
+        finally { Directory.Delete(dir, true); }
     }
-
-    static string TempDirAndForget() => TempDir();
 }

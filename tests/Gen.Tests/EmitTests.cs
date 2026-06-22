@@ -62,7 +62,7 @@ public class EmitTests
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
             var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.g.cs"));
-            Assert.Contains("public sealed record CreateInvoiceCommand(string CustomerId, Money Amount);", f);
+            Assert.Contains("public sealed record CreateInvoiceCommand(string CustomerId, decimal Amount);", f);
             Assert.Contains("public partial Task<Result<Invoice>> ExecuteAsync(CreateInvoiceCommand request, CancellationToken ct);", f);
         }
         finally { Directory.Delete(dir, true); }

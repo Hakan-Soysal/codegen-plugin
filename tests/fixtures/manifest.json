@@ -17,7 +17,7 @@
             "signature": {
                 "params": [
                     { "name": "customerId", "type": "ID", "collection": false },
-                    { "name": "amount", "type": "Money", "collection": false }
+                    { "name": "amount", "type": "Decimal", "collection": false }
                 ],
                 "returns": "Invoice"
             },
@@ -109,7 +109,7 @@
             "fields": [
                 { "name": "id", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
                 { "name": "customerId", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
-                { "name": "amount", "type": "Money", "collection": false, "cardinality": "one", "ref": "type" },
+                { "name": "amount", "type": "Decimal", "collection": false, "cardinality": "one", "ref": "scalar" },
                 { "name": "status", "type": "InvoiceStatus", "collection": false, "cardinality": "one", "ref": "enum" },
                 { "name": "createdAt", "type": "DateTime", "collection": false, "cardinality": "one", "ref": "scalar" }
             ],

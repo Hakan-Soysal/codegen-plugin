@@ -29,11 +29,11 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 ## Phase 5 — Go spike (SEAM GATE)
 - [x] Task 13 · Go emitter, Phase 2–4 construct'ları, aynı GM (L→dilimle)
 - [ ] Task 14 · Seam bulguları raporu (S)
-- [ ] ▸ Checkpoint: SEAM GATE — structure ancak şimdi 'stabil'
+- [x] ▸ Checkpoint: SEAM GATE — structure ancak şimdi 'stabil'
 
 ## Phase 6 — GM sertleştirme
-- [ ] Task 15 · GM'i Go bulgularına göre düzelt (M)
-- [ ] Task 16 · generation-model.schema.json (S)
+- [x] Task 15 · GM'i Go bulgularına göre düzelt (M)
+- [~] Task 16 · generation-model.schema.json — ERTELENDI (GM serialize edilmiyor; C# record = kontrat)
 
 ## Phase 7 — .NET long-tail
 - [ ] Task 17 · pagination (S)

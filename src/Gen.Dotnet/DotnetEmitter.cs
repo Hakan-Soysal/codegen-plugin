@@ -43,7 +43,7 @@ public static class DotnetEmitter
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities));
             foreach (var e in entities)
             {
-                var inv = InvariantsFile(module.Name, e, report);
+                var inv = InvariantsFile(module.Name, e, gm, report);
                 if (inv is not null) WriteAlways(Path.Combine(dir, $"{e.Id}.Invariants.g.cs"), inv);
             }
 
@@ -51,7 +51,7 @@ public static class DotnetEmitter
             {
                 WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op));
                 WriteIfAbsent(Path.Combine(dir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
-                var guards = GuardsFile(module.Name, op, report);
+                var guards = GuardsFile(module.Name, op, gm, report);
                 if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
                 var auth = AuthFile(module.Name, op, report);
                 if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
@@ -176,77 +176,96 @@ public static class DotnetEmitter
             """;
     }
 
-    // ── guard/invariant predicate'leri (Task 8, INV-4) ───────────────────
-    static string? GuardsFile(string module, GmOperation op, BuildReport report)
+    // ── guard/invariant predicate'leri (INV-4, tipli — dynamic YOK) ──────
+    // Her predicate: tip-çözümlü `input` record + tipli predicate. Veri-besleme tipli seam.
+    static string? GuardsFile(string module, GmOperation op, GenerationModel gm, BuildReport report)
     {
-        var preds = new List<string>();
-        for (var i = 0; i < op.Op.Validation.Count; i++)
-            preds.Add(Predicate("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text, op.Id, report));
-        for (var i = 0; i < op.Op.Rule.Count; i++)
-            preds.Add(Predicate("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text, op.Id, report));
-        if (op.Op.Abac is not null)
-            preds.Add(Predicate("Permit", 0, op.Op.Abac.Permit, op.Op.Abac.Permit.ToString() ?? "permit", op.Id, report));
-        if (preds.Count == 0) return null;
+        var methods = new List<string>();
+        var records = new List<string>();
+        void Add(string kind, int i, Gen.Core.Model.ExprNode ast, string text)
+        {
+            var (method, rec) = Predicate(kind, i, ast, text, op.Id, entityId: null, gm, report);
+            methods.Add(method);
+            if (rec is not null) records.Add(rec);
+        }
+        for (var i = 0; i < op.Op.Validation.Count; i++) Add("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text);
+        for (var i = 0; i < op.Op.Rule.Count; i++) Add("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text);
+        if (op.Op.Abac is not null) Add("Permit", 0, op.Op.Abac.Permit, op.Op.Abac.Permit.ToString() ?? "permit");
+        if (methods.Count == 0) return null;
 
         return
             $$"""
             namespace {{Root}}.{{module}};
 
-            // validation→NotValid(400) · rule→NotProcessable(422) · permit→authz.
-            // ponytail: dynamic ctx (request/resource/actor); yapısal şekil emit, tip-bağlama insan seam'i.
+            // validation→NotValid(400) · rule→NotProcessable(422) · permit→authz. Tipli predicate (dynamic yok);
+            // `input` record manifest tiplerinden — çözülemeyen alan tipli seam (inferred), insan input'u doldurur.
             public partial class {{op.Id}}Handler
             {
-            {{string.Join("\n", preds)}}
+            {{string.Join("\n", methods)}}
             }
 
+            {{string.Join("\n", records)}}
             """;
     }
 
-    static string Predicate(string kind, int i, Gen.Core.Model.ExprNode ast, string text, string opId, BuildReport report)
+    static (string Method, string? Record) Predicate(
+        string kind, int i, Gen.Core.Model.ExprNode ast, string text,
+        string? opId, string? entityId, GenerationModel gm, BuildReport report)
     {
-        var key = $"{opId}#{kind}{i}";
+        var owner = opId ?? entityId!;
+        var key = $"{owner}#{kind}{i}";
         try
         {
-            var expr = ExprEmit.Emit(ast);
-            report.Realized(kind.ToLowerInvariant(), key);
-            return $"    static bool {kind}_{i}(dynamic request, dynamic resource, dynamic actor) => {expr};";
+            var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(ast);
+            var inputName = $"{owner}{kind}{i}Input";
+            var anyInferred = false;
+            var fields = new List<string>();
+            foreach (var p in paths)
+            {
+                var (cs, resolved) = ResolveType(p, gm, opId, entityId);
+                if (!resolved) anyInferred = true;
+                fields.Add($"{cs} {Gen.Core.Predicate.ExprBuild.PropName(p)}");
+            }
+            report.Realized(kind.ToLowerInvariant(), key + (anyInferred ? " [inferred-seam]" : ""));
+            var record = $"public sealed record {inputName}({string.Join(", ", fields)});";
+            return ($"    static bool {kind}_{i}({inputName} input) => {expr};", record);
         }
         catch (Gen.Core.UnsupportedConstruct e)
         {
             report.Unsupported(kind.ToLowerInvariant(), key, e.Message);
-            return $"    static bool {kind}_{i}(dynamic request, dynamic resource, dynamic actor) => throw new NotImplementedException(\"unsupported: {Escape(text)}\");";
+            return ($"    static bool {kind}_{i}() => throw new NotImplementedException(\"unsupported: {Escape(text)}\");", null);
         }
     }
 
-    static string? InvariantsFile(string module, EntityJson e, BuildReport report)
+    // path → C# tip + çözüldü mü. Nötr çözümü GM yapar; burada dile map'lenir. Çözülemeyen→decimal (tipli seam).
+    static (string Cs, bool Resolved) ResolveType(IReadOnlyList<string> path, GenerationModel gm, string? opId, string? entityId)
+    {
+        var mt = gm.Env.ResolvePath(gm, path, opId, entityId);
+        return mt is null ? ("decimal", false) : (Naming.Type(mt, false), true);
+    }
+
+    static string? InvariantsFile(string module, EntityJson e, GenerationModel gm, BuildReport report)
     {
         if (e.Invariants.Count == 0) return null;
-        var preds = new List<string>();
+        var methods = new List<string>();
+        var records = new List<string>();
         for (var i = 0; i < e.Invariants.Count; i++)
         {
-            var key = $"{e.Id}#inv{i}";
-            try
-            {
-                var expr = ExprEmit.Emit(e.Invariants[i].Ast, "entity");
-                report.Realized("invariant", key);
-                preds.Add($"    public static bool Check_{i}(dynamic entity) => {expr};");
-            }
-            catch (Gen.Core.UnsupportedConstruct ex)
-            {
-                report.Unsupported("invariant", key, ex.Message);
-                preds.Add($"    public static bool Check_{i}(dynamic entity) => throw new NotImplementedException(\"unsupported: {Escape(e.Invariants[i].Text)}\");");
-            }
+            var (method, rec) = Predicate("Check", i, e.Invariants[i].Ast, e.Invariants[i].Text, opId: null, entityId: e.Id, gm, report);
+            methods.Add(method.Replace("static bool", "public static bool"));
+            if (rec is not null) records.Add(rec);
         }
         return
             $$"""
             namespace {{Root}}.{{module}};
 
-            // entity invariant'ları (kalıcı veri-bütünlüğü). ponytail: dynamic entity; EF model-validation/DB CHECK Task 9'da.
+            // entity invariant'ları (kalıcı veri-bütünlüğü). Tipli predicate; `input` entity alanlarından.
             public static class {{e.Id}}Invariants
             {
-            {{string.Join("\n", preds)}}
+            {{string.Join("\n", methods)}}
             }
 
+            {{string.Join("\n", records)}}
             """;
     }
 
