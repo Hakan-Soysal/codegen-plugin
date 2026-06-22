@@ -59,4 +59,20 @@ public class LatentConstructTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    // ── B3 — deployable → compose stub ────────────────────────────────────
+    [Fact]
+    public void Deployable_emits_compose_service_per_deployable()
+    {
+        var (report, dir, _) = EmitMut(m => m);   // fixture already has BillingService(units=[Billing])
+        try
+        {
+            var compose = File.ReadAllText(Path.Combine(dir, "deploy", "docker-compose.yml"));
+            Assert.Contains("billingservice:", compose);
+            Assert.Contains("UNITS=Billing", compose);
+            Assert.True(report.Covers("deployable", "BillingService"));
+            NoDrop(report, "deployable", "BillingService");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

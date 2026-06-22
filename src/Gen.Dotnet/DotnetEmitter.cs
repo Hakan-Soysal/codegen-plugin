@@ -21,6 +21,11 @@ public static class DotnetEmitter
         Directory.CreateDirectory(src);
 
         WriteAlways(Path.Combine(outDir, "App.csproj"), Csproj());
+        if (gm.Deployables.Count > 0)
+        {
+            Directory.CreateDirectory(Path.Combine(outDir, "deploy"));
+            WriteAlways(Path.Combine(outDir, "deploy", "docker-compose.yml"), ComposeFile(gm, report));
+        }
         WriteAlways(Path.Combine(src, "Result.g.cs"), ResultTypes());        // Task 6
         WriteAlways(Path.Combine(src, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
 
@@ -183,6 +188,30 @@ public static class DotnetEmitter
             if (e.Concurrency == "optimistic")
                 sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
             sb.Append("}\n\n");
+        }
+        return sb.ToString();
+    }
+
+    // deployable → deployment topolojisi (her deployable bir compose service; units = co-hosted modüller).
+    // ponytail: tek App image; gerçek image/registry/network/orchestrator = §8 policy / insan.
+    static string ComposeFile(GenerationModel gm, BuildReport report)
+    {
+        report.Policy("deployment-topology", "docker-compose stub (generator-policy)");
+        var sb = new StringBuilder();
+        sb.Append("# generated deployment topology (deployable → service; units = co-hosted modules).\n");
+        sb.Append("# ponytail: tek App image; gerçek image/registry/network/orchestrator = §8 / insan.\n");
+        sb.Append("services:\n");
+        foreach (var d in gm.Deployables)
+        {
+            report.Realized("deployable", d.Name);
+            if (d.Ext is { Count: > 0 })
+                foreach (var x in d.Ext) { report.Realized($"@{x.Ns}.{x.Name}", d.Name); report.Policy($"{x.Ns}-realization", "compose annotation (generator-policy)"); }
+            sb.Append($"  {d.Name.ToLowerInvariant()}:\n");
+            sb.Append("    image: app:latest          # ponytail: build context/registry seam\n");
+            sb.Append("    environment:\n");
+            sb.Append($"      - UNITS={string.Join(",", d.Units)}   # co-hosted modules\n");
+            if (d.Ext is { Count: > 0 })
+                sb.Append($"    # ext: {string.Join(" ; ", d.Ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)\n");
         }
         return sb.ToString();
     }

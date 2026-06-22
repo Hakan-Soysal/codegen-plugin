@@ -50,6 +50,8 @@ public static class GmBuilder
             CallEdges: m.CallEdges
                 .OrderBy(x => x.From, StringComparer.Ordinal).ThenBy(x => x.To.System, StringComparer.Ordinal)
                 .ThenBy(x => x.To.Op, StringComparer.Ordinal).ToList(),
+            Deployables: m.Deployables.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
+            Uncharted: m.Uncharted,
             Env: env);
     }
 

@@ -26,7 +26,6 @@ public class CompletenessTests
     static readonly HashSet<string> KnownDebt = new()
     {
         // Sınıf-1 (B fazı):
-        "deployable/BillingService",
         "note/CreateInvoice",
         // serving raporlama (D1):
         "serving/CreateInvoice:rest", "serving/GetInvoice:rest", "serving/ListInvoices:rest",

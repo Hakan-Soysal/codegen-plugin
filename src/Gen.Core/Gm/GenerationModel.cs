@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gen.Core.Model;
 
 namespace Gen.Core.Gm;
@@ -18,6 +19,8 @@ public sealed record GenerationModel(
     IReadOnlyList<ErrorJson> Errors,
     IReadOnlyList<ExternalJson> Externals,
     IReadOnlyList<CallEdgeJson> CallEdges,
+    IReadOnlyList<Deployable> Deployables,
+    IReadOnlyList<JsonElement> Uncharted,
     TypeEnv Env);
 
 /// <summary>
