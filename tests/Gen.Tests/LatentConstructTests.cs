@@ -114,6 +114,26 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── D3 — on/subscriptions → consumer wiring ───────────────────────────
+    [Fact]
+    public void Subscription_emits_consumer_handler_skeleton()
+    {
+        var (report, dir, _) = EmitMut(m => m with
+        {
+            Subscriptions = new() { new SubscriptionJson(new EventRef("Billing", "InvoiceCreated"), new ConsumerRef("Billing", "GetInvoice")) }
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Subscriptions.g.cs"));
+            Assert.Contains("public sealed class InvoiceCreatedToGetInvoiceConsumer", f);
+            Assert.Contains("App.Billing.GetInvoiceHandler handler", f);
+            Assert.Contains("App.Billing.InvoiceCreated @event", f);
+            Assert.True(report.Covers("subscription", "InvoiceCreated"));
+            NoDrop(report, "subscription", "InvoiceCreated");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── D2 — external BoundaryOp serving + validation (INV-4) ─────────────
     [Fact]
     public void Boundary_op_serving_and_caller_validation_emitted()

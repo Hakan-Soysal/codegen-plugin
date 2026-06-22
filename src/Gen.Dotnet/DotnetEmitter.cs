@@ -29,7 +29,7 @@ public static class DotnetEmitter
         if (gm.Entities.Count > 0) WriteAlways(Path.Combine(src, "AppDbContext.g.cs"), DbContextFile(gm));
         if (gm.Events.Count > 0) WriteAlways(Path.Combine(src, "EventBus.g.cs"), EventBus());
         foreach (var ev in gm.Events) report.Realized("event", ev.Id);
-        foreach (var s in gm.Subscriptions) report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
+        if (gm.Subscriptions.Count > 0) WriteAlways(Path.Combine(src, "Subscriptions.g.cs"), SubscriptionsFile(gm, report));   // D3
 
         if (gm.Deployables.Count > 0)
             WriteAlways(Path.Combine(src, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
@@ -680,6 +680,23 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
+    // on/subscriptions → consumer wiring (handler iskeleti + DI registration). ponytail: event→request eşleme + dispatch = §8 seam.
+    static string SubscriptionsFile(GenerationModel gm, BuildReport report)
+    {
+        var sb = new StringBuilder($"namespace {Root};\n\n");
+        sb.Append("// on/subscriptions → consumer wiring. ponytail: handler iskeleti; gerçek dispatch IEventBus altyapısı (§8).\n\n");
+        foreach (var s in gm.Subscriptions)
+        {
+            report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
+            var cls = $"{s.Event.Name}To{s.Consumer.Op}Consumer";
+            sb.Append($"public sealed class {cls}({Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler handler)\n{{\n");
+            sb.Append($"    public Task HandleAsync({Root}.{s.Event.Module}.{s.Event.Name} @event, CancellationToken ct = default)\n");
+            sb.Append($"        => throw new NotImplementedException($\"subscription: {s.Event.Name} → {s.Consumer.Op} (event→request eşle + {{nameof(handler)}}.ExecuteAsync)\");\n");
+            sb.Append("}\n\n");
+        }
+        return sb.ToString();
+    }
+
     static string EventBus() =>
         $$"""
         namespace {{Root}};
@@ -805,6 +822,8 @@ public static class DotnetEmitter
             di.Append($"builder.Services.AddSingleton<{Root}.Uncharted.{u.Name}.I{u.Name}, {Root}.Uncharted.{u.Name}.{u.Name}Client>();\n");
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
             di.Append("builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();\n");
+        foreach (var s in gm.Subscriptions)
+            di.Append($"builder.Services.AddScoped<{s.Event.Name}To{s.Consumer.Op}Consumer>();\n");
         var maps = new StringBuilder();
         foreach (var op in gm.Operations)
         {
