@@ -23,11 +23,7 @@ public class CompletenessTests
 
     // Ratchet: bilinen-borç allowlist'i. Her fix bu seti küçültür; YENİ drop (allowlist dışı) testi kırar.
     // Set boşalınca = gate tam yeşil (Phase E hedefi).
-    static readonly HashSet<string> KnownDebt = new()
-    {
-        // serving raporlama (D1):
-        "serving/CreateInvoice:rest", "serving/GetInvoice:rest", "serving/ListInvoices:rest",
-    };
+    static readonly HashSet<string> KnownDebt = new();
 
     [Fact]
     public void No_silent_drops_beyond_known_debt()

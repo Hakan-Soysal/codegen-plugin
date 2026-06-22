@@ -87,6 +87,15 @@ public static class DotnetEmitter
                 var consistency = ConsistencyPartial(module.Name, op, report);
                 if (consistency is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Consistency.g.cs"), consistency);
                 if (op.Op.Note is not null) report.Realized("note", op.Id);
+                foreach (var s in op.Op.Serving)
+                {
+                    if (s.Protocol == "rest") report.Realized("serving", $"{op.Id}:{s.Protocol}");   // artefakt = Program.cs map (MapLine)
+                    else
+                    {
+                        report.Unsupported("serving", $"{op.Id}:{s.Protocol}", $"protokol '{s.Protocol}' .NET adaptöründe binding yok (REST-only); açık UnsupportedConstruct.");
+                        report.Policy($"serving-{s.Protocol}", "unsupported: REST-only binding (generator-policy)");
+                    }
+                }
                 report.Realized("operation", op.Id);
             }
         }

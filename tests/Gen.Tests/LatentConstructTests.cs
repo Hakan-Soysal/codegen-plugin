@@ -114,6 +114,27 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── D1 — serving @grpc/@queue → explicit UnsupportedConstruct ─────────
+    [Fact]
+    public void Serving_rest_realized_nonrest_unsupported_not_silent()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var create = Op(m, "CreateInvoice");
+            var serving = create.Serving.Append(new ServingJson("grpc", new(), "grpc")).ToList();
+            return WithOp(m, create with { Serving = serving });
+        });
+        try
+        {
+            Assert.True(report.Covers("serving", "CreateInvoice:rest"));   // realized
+            // grpc covered as explicit Unsupported (NOT a silent drop)
+            Assert.Contains(report.Entries, e => e.Construct == "serving" && e.Id == "CreateInvoice:grpc" && e.Status == ConstructStatus.Unsupported);
+            NoDrop(report, "serving", "CreateInvoice:grpc");
+            NoDrop(report, "serving", "CreateInvoice:rest");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── C4 — for guard / guardRef → predicate comment (resolved Q1) ────────
     [Fact]
     public void GuardRef_emitted_as_predicate_comment()

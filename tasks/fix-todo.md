@@ -22,7 +22,7 @@ Sıra: risk-first. Gate önce (drop'ları RED'e çevirir), sonra fix → yeşile
 - [ ] ▸ Checkpoint C: latent drop'lar kapandı
 
 ## Phase D — Partial'lar
-- [ ] D1 · serving @grpc/@queue → UnsupportedConstruct+report (sessiz değil) (S)
+- [x] D1 · serving @grpc/@queue → UnsupportedConstruct+report (sessiz değil) (S)
 - [ ] D2 · external BoundaryOp serving+validation AST (INV-4) (S)
 - [ ] D3 · on/subscriptions → consumer wiring (M)
 - [ ] D4 · @http/@trigger → hedef-stub + policy (M) — Open Q2
