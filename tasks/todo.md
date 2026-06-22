@@ -6,8 +6,8 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [x] Task 1 · Solution + manifest fixture (S)
 - [x] Task 2 · POCO'lar + ExprNode polimorfik converter (M)
 - [x] Task 3 · Load + realizes-join + GM (operations) (M)
-- [ ] Task 4 · build-report iskeleti (S)
-- [ ] ▸ Checkpoint: Foundation
+- [x] Task 4 · build-report iskeleti (S)
+- [x] ▸ Checkpoint: Foundation
 
 ## Phase 2 — .NET walking skeleton
 - [ ] Task 5a · Operation → Command/Query + Handler.g.cs + Handler.Logic.cs (M)
