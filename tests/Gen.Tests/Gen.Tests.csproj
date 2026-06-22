@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Gen.Core\Gen.Core.csproj" />
     <ProjectReference Include="..\..\src\Gen.Dotnet\Gen.Dotnet.csproj" />
+    <ProjectReference Include="..\..\src\Gen.Go\Gen.Go.csproj" />
   </ItemGroup>
 
 </Project>

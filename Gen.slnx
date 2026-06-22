@@ -3,6 +3,7 @@
     <Project Path="src/Gen.Cli/Gen.Cli.csproj" />
     <Project Path="src/Gen.Core/Gen.Core.csproj" />
     <Project Path="src/Gen.Dotnet/Gen.Dotnet.csproj" />
+    <Project Path="src/Gen.Go/Gen.Go.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Gen.Tests/Gen.Tests.csproj" />

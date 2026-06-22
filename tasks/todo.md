@@ -27,7 +27,7 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [x] ▸ Checkpoint: .NET core (Go spike'a hazır)
 
 ## Phase 5 — Go spike (SEAM GATE)
-- [ ] Task 13 · Go emitter, Phase 2–4 construct'ları, aynı GM (L→dilimle)
+- [x] Task 13 · Go emitter, Phase 2–4 construct'ları, aynı GM (L→dilimle)
 - [ ] Task 14 · Seam bulguları raporu (S)
 - [ ] ▸ Checkpoint: SEAM GATE — structure ancak şimdi 'stabil'
 
