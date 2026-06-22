@@ -111,14 +111,12 @@ public class LatentConstructTests
     {
         var (report, dir, _) = EmitMut(m =>
         {
-            var mod = m.Modules[0] with { Ext = new() { Ext("audit", "trace") } };
-            var money = m.Types.First(t => t.Id == "Money");
-            var moneyExt = money with
-            {
-                Ext = new() { Ext("schema", "versioned") },
-                Fields = money.Fields!.Select(f => f.Name == "amount" ? f with { Ext = new() { Ext("metric", "gauge") } } : f).ToList()
-            };
-            var inv = m.Entities[0] with { Ext = new() { Ext("audit", "table") } };
+            // additive: mevcut tüm construct'ları koru, sadece seçili site'lara ext EKLE.
+            var modules = m.Modules.Select(x => x.Name == "Billing" ? x with { Ext = new() { Ext("audit", "trace") } } : x).ToList();
+            var types = m.Types.Select(t => t.Id == "Money"
+                ? t with { Ext = new() { Ext("schema", "versioned") }, Fields = t.Fields!.Select(f => f.Name == "amount" ? f with { Ext = new() { Ext("metric", "gauge") } } : f).ToList() }
+                : t).ToList();
+            var entities = m.Entities.Select(e => e.Id == "Invoice" ? e with { Ext = new() { Ext("audit", "table") } } : e).ToList();
             var create = Op(m, "CreateInvoice");
             var createExt = create with
             {
@@ -127,7 +125,7 @@ public class LatentConstructTests
                     Params = create.Signature.Params.Select(p => p.Name == "customerId" ? p with { Ext = new() { Ext("sensitivity", "pii") } } : p).ToList()
                 }
             };
-            return WithOp(m with { Modules = new() { mod }, Types = m.Types.Select(t => t.Id == "Money" ? moneyExt : t).ToList(), Entities = new() { inv } }, createExt);
+            return WithOp(m with { Modules = modules, Types = types, Entities = entities }, createExt);
         });
         try
         {

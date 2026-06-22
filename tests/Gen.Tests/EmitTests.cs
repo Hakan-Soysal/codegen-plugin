@@ -38,16 +38,20 @@ public class EmitTests
     }
 
     [Fact]
-    public void Emitted_app_compiles_and_report_is_clean()
+    public void Emitted_app_compiles_and_gate_has_no_silent_drops()
     {
         var dir = TempDir();
         try
         {
             var report = new BuildReport();
+            var m = Json.Parse<ManifestJson>(Fixtures.Read("manifest.json"));
             DotnetEmitter.Emit(Gm().Value, dir, report);
+            Completeness.Check(m, report);   // full gate over the full-keyword fixture
 
             Assert.True(File.Exists(Path.Combine(dir, "App.csproj")));
-            Assert.True(report.Clean);
+            // Gate sözleşmesi = 0 SilentDrop (INV-7). Unsupported (grpc/queue serving) açık rapordur, drop değil.
+            Assert.True(report.SilentDrops.Count == 0,
+                "SilentDrop var:\n" + string.Join("\n", report.SilentDrops.Select(d => $"{d.Construct}/{d.Id}")));
 
             var (code, output) = Dotnet("build App.csproj -v q --nologo", dir);
             Assert.True(code == 0, "Üretilen app derlenmedi:\n" + output);

@@ -17,6 +17,7 @@ Completeness.Check(manifest, report);   // INV-7 gate: census ⊄ report → Sil
 report.WriteTo(Path.Combine(outDir, "build-report.json"));
 
 var drops = report.SilentDrops;
+// Gate exit kodu = SilentDrop yokluğu (INV-7). Unsupported (ör. grpc/queue serving) AÇIK rapordur, drop değil.
 Console.WriteLine($"emit → {outDir}  (clean={report.Clean}, constructs={report.Entries.Count}, silentDrops={drops.Count})");
 foreach (var d in drops) Console.WriteLine($"  ⚠ SESSİZ DROP: {d.Construct} / {d.Id}");
-return report.Clean ? 0 : 1;
+return drops.Count == 0 ? 0 : 1;

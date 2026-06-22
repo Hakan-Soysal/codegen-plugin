@@ -37,7 +37,7 @@ public class JoinTests
     public void Operations_are_deterministically_ordered_by_id()
     {
         var gm = GmBuilder.Build(Manifest(), Contract());
-        Assert.Equal(new[] { "CreateInvoice", "GetInvoice", "ListInvoices" }, gm.Operations.Select(o => o.Id));
+        Assert.Equal(new[] { "CreateInvoice", "GetInvoice", "ListInvoices", "WriteAuditLog" }, gm.Operations.Select(o => o.Id));
     }
 
     [Fact]

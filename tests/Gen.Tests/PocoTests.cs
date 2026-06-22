@@ -69,9 +69,9 @@ public class ManifestPocoTests
     {
         var m = M();
         Assert.Equal("linked", m.Mode);
-        Assert.Equal(3, m.Operations.Count);
-        Assert.Single(m.Entities);
-        Assert.Equal(2, m.Types.Count);
+        Assert.Equal(4, m.Operations.Count);
+        Assert.Equal(2, m.Entities.Count);
+        Assert.Equal(4, m.Types.Count);
         Assert.Single(m.Events);
     }
 
@@ -88,7 +88,7 @@ public class ManifestPocoTests
     [Fact]
     public void Entity_invariant_and_concurrency()
     {
-        var e = M().Entities.Single();
+        var e = M().Entities.Single(x => x.Id == "Invoice");
         Assert.Equal("optimistic", e.Concurrency);
         Assert.Equal(5, e.Fields.Count);
         Assert.IsType<BinaryNode>(e.Invariants.Single().Ast);
