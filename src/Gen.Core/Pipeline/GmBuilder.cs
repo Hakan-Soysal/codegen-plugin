@@ -46,6 +46,10 @@ public static class GmBuilder
                 .OrderBy(x => x.Event.Module, StringComparer.Ordinal).ThenBy(x => x.Event.Name, StringComparer.Ordinal)
                 .ThenBy(x => x.Consumer.Op, StringComparer.Ordinal).ToList(),
             Errors: m.Errors.OrderBy(x => x.Id, StringComparer.Ordinal).ToList(),
+            Externals: m.Externals.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
+            CallEdges: m.CallEdges
+                .OrderBy(x => x.From, StringComparer.Ordinal).ThenBy(x => x.To.System, StringComparer.Ordinal)
+                .ThenBy(x => x.To.Op, StringComparer.Ordinal).ToList(),
             Env: env);
     }
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Diagnostics;
 using Gen.Core;
 using Gen.Core.Model;
@@ -111,6 +112,31 @@ public class EmitTests
             Assert.Contains("Page<Invoice>", f);
             Assert.Contains("string? Cursor, int Size", f);
             Assert.Contains("ORDER BY CreatedAt desc", f);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Boundary_idempotent_ext_and_policies_emitted()
+    {
+        var dir = TempDir();
+        try
+        {
+            var report = new BuildReport();
+            DotnetEmitter.Emit(Gm().Value, dir, report);
+
+            var boundary = File.ReadAllText(Path.Combine(dir, "src", "Boundary.g.cs"));
+            Assert.Contains("public interface IPaymentGateway", boundary);
+            Assert.Contains("compensate: PaymentGateway.refund", boundary);            // saga skeleton
+            Assert.True(File.Exists(Path.Combine(dir, "src", "Idempotency.g.cs")));
+            Assert.Contains("IdempotencyKeys = [\"customerId\"]", File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Idem.g.cs")));
+            Assert.Contains("@crypto.encrypted", File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs")));
+
+            // §8 politikaları açıkça çözülmüş (INV-3) — build-report'ta kayıtlı
+            using var rep = JsonDocument.Parse(report.ToJson());
+            var pol = rep.RootElement.GetProperty("policies");
+            foreach (var k in new[] { "dedup-store", "saga-orchestration-state", "crypto-realization", "cursor-token" })
+                Assert.True(pol.TryGetProperty(k, out _), $"policy eksik: {k}");
         }
         finally { Directory.Delete(dir, true); }
     }

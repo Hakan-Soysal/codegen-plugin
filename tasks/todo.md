@@ -37,8 +37,8 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 
 ## Phase 7 — .NET long-tail
 - [x] Task 17 · pagination (S)
-- [ ] Task 18 · calls + compensate → saga iskeleti (M)
-- [ ] Task 19 · idempotent → dedup konvansiyonu (S)
-- [ ] Task 20 · passthrough prelude'lar (@http/@trigger/@crypto/@audit/@sensitivity/@metric) (M)
-- [ ] Task 21 · external/uncharted → çağrı-adapter stub (S)
-- [ ] ▸ Checkpoint: Complete
+- [x] Task 18 · calls + compensate → saga iskeleti (M)
+- [x] Task 19 · idempotent → dedup konvansiyonu (S)
+- [x] Task 20 · passthrough prelude'lar (@http/@trigger/@crypto/@audit/@sensitivity/@metric) (M)
+- [x] Task 21 · external/uncharted → çağrı-adapter stub (S)
+- [x] ▸ Checkpoint: Complete

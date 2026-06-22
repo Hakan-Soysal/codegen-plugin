@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Gen.Core.Gm;
 using Gen.Core.Model;
 using Gen.Core.Report;
@@ -30,6 +31,11 @@ public static class DotnetEmitter
         foreach (var ev in gm.Events) report.Realized("event", ev.Id);
         foreach (var s in gm.Subscriptions) report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
 
+        if (gm.Externals.Count > 0 || gm.CallEdges.Count > 0)
+            WriteAlways(Path.Combine(src, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
+        if (gm.Operations.Any(o => o.Op.Idempotent is not null))
+            WriteAlways(Path.Combine(src, "Idempotency.g.cs"), IdempotencyStore());       // Task 19
+
         foreach (var module in gm.Modules)
         {
             var dir = Path.Combine(src, module.Name);
@@ -40,7 +46,7 @@ public static class DotnetEmitter
             var events = gm.Events.Where(e => e.Module == module.Name).ToList();
             if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events));
             if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types));
-            if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities));
+            if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities, report));
             foreach (var e in entities)
             {
                 var inv = InvariantsFile(module.Name, e, gm, report);
@@ -57,6 +63,13 @@ public static class DotnetEmitter
                 if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
                 foreach (var ev in op.Op.Emits) report.Realized("emits", $"{op.Id}->{ev}");
                 if (op.Op.Pagination is not null) { report.Realized("pagination", op.Id); report.Policy("cursor-token", "opaque (generator-policy)"); }
+                if (op.Op.Idempotent is not null)
+                {
+                    WriteAlways(Path.Combine(dir, $"{op.Id}.Idem.g.cs"), IdemPartial(module.Name, op));
+                    report.Realized("idempotent", op.Id); report.Policy("dedup-store", "in-memory (generator-policy)");
+                }
+                var ext = ExtPartial(module.Name, op, report);
+                if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
                 report.Realized("operation", op.Id);
             }
         }
@@ -143,8 +156,8 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
-    // entity → EF entity class. concurrency optimistic → [Timestamp] RowVersion.
-    static string EntitiesFile(string module, List<EntityJson> entities)
+    // entity → EF entity class. concurrency optimistic → [Timestamp] RowVersion. Field ext → yorum (@crypto/@sensitivity).
+    static string EntitiesFile(string module, List<EntityJson> entities, BuildReport report)
     {
         var sb = new StringBuilder();
         sb.Append("using System.ComponentModel.DataAnnotations;\n\n");
@@ -153,13 +166,121 @@ public static class DotnetEmitter
         {
             sb.Append($"public class {e.Id}\n{{\n");
             foreach (var f in e.Fields)
+            {
+                if (f.Ext is { Count: > 0 })
+                {
+                    foreach (var x in f.Ext) { report.Realized($"@{x.Ns}.{x.Name}", $"{e.Id}.{f.Name}"); report.Policy($"{x.Ns}-realization", "EF value-converter/attribute (generator-policy)"); }
+                    sb.Append($"    // {string.Join(" ; ", f.Ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)\n");
+                }
                 sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
+            }
             if (e.Concurrency == "optimistic")
                 sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
             sb.Append("}\n\n");
         }
         return sb.ToString();
     }
+
+    // ── boundary (external/uncharted çağrı-adapter) + saga (calls+compensate) ──
+    static string BoundaryFile(GenerationModel gm, BuildReport report)
+    {
+        var sb = new StringBuilder($"namespace {Root};\n\n");
+        sb.Append("// external çağrı-adapter'leri (generated:false → sistemi ÜRETME, yalnız çağıran arayüz + stub client).\n\n");
+        foreach (var ext in gm.Externals)
+        {
+            report.Realized("external", ext.Name);
+            string Sig(BoundaryOpJson b)
+            {
+                var ps = string.Join(", ", b.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {p.Name}"));
+                var comma = b.Signature.Params.Count > 0 ? ", " : "";
+                return $"Task<{Naming.Type(b.Signature.Returns, false)}> {Naming.Pascal(b.Id)}({ps}{comma}CancellationToken ct = default)";
+            }
+            sb.Append($"public interface I{ext.Name}\n{{\n");
+            foreach (var b in ext.Operations) { report.Realized("boundary-op", $"{ext.Name}.{b.Id}"); sb.Append($"    {Sig(b)};\n"); }
+            sb.Append("}\n\n");
+            sb.Append($"public sealed class {ext.Name}Client : I{ext.Name}\n{{\n");
+            foreach (var b in ext.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{ext.Name}.{b.Id}\");\n");
+            sb.Append("}\n\n");
+        }
+        foreach (var ce in gm.CallEdges)
+        {
+            report.Realized("calls", $"{ce.From}->{ce.To.System}.{ce.To.Op}");
+            if (ce.Compensate is not null)
+            {
+                report.Realized("compensate", $"{ce.From}:{ce.To.System}.{ce.To.Op}");
+                report.Policy("saga-orchestration-state", "in-memory (generator-policy)");
+                sb.Append($"// saga: {ce.From} → {ce.To.System}.{ce.To.Op} (compensate: {ce.Compensate.System}.{ce.Compensate.Op})\n");
+                sb.Append($"// ponytail: committed-adımları izle; hata → ters-sıra {ce.Compensate.Op} çağır (orchestration-state seam).\n\n");
+            }
+        }
+        return sb.ToString();
+    }
+
+    static string IdempotencyStore() =>
+        $$"""
+        namespace {{Root}};
+
+        // idempotency dedup seam. ponytail: in-memory; kalıcı store/pencere/replay = §8 policy.
+        public interface IIdempotencyStore { Task<bool> TryBeginAsync(string key, CancellationToken ct = default); }
+
+        public sealed class InMemoryIdempotencyStore : IIdempotencyStore
+        {
+            readonly HashSet<string> _seen = new();
+            public Task<bool> TryBeginAsync(string key, CancellationToken ct = default)
+            {
+                lock (_seen) return Task.FromResult(_seen.Add(key));
+            }
+        }
+
+        """;
+
+    static string IdemPartial(string module, GmOperation op) =>
+        $$"""
+        namespace {{Root}}.{{module}};
+
+        // idempotent by: {{string.Join(", ", op.Op.Idempotent!.Keys)}} (dedup-store = generator-policy)
+        public partial class {{op.Id}}Handler
+        {
+            public static readonly string[] IdempotencyKeys = [{{string.Join(", ", op.Op.Idempotent!.Keys.Select(k => $"\"{Escape(k)}\""))}}];
+        }
+
+        """;
+
+    static string? ExtPartial(string module, GmOperation op, BuildReport report)
+    {
+        if (op.Op.Ext is not { Count: > 0 }) return null;
+        var lines = new List<string>();
+        foreach (var e in op.Op.Ext)
+        {
+            report.Realized($"@{e.Ns}.{e.Name}", op.Id);
+            report.Policy($"{e.Ns}-realization", "interceptor/attribute (generator-policy)");
+            lines.Add($"    // @{e.Ns}.{e.Name}({string.Join(", ", e.Args.Select(a => $"{a.Key}={a.Value}"))})");
+        }
+        var audit = op.Op.Ext.FirstOrDefault(e => e.Ns == "audit");
+        var metric = op.Op.Ext.FirstOrDefault(e => e.Ns == "metric");
+        if (audit is not null && audit.Args.TryGetValue("category", out var cat)) lines.Add($"    public const string AuditCategory = {JsonStr(cat)};");
+        if (metric is not null && metric.Args.TryGetValue("name", out var mn)) lines.Add($"    public const string MetricName = {JsonStr(mn)};");
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // passthrough prelude'lar (core yorumlamaz; hedef-özel realizasyon = §8 policy).
+            public partial class {{op.Id}}Handler
+            {
+            {{string.Join("\n", lines)}}
+            }
+
+            """;
+    }
+
+    static string JsonStr(JsonElement v) => v.ValueKind switch
+    {
+        JsonValueKind.String => $"\"{Escape(v.GetString()!)}\"",
+        JsonValueKind.Number => v.GetRawText(),
+        JsonValueKind.True => "true",
+        JsonValueKind.False => "false",
+        _ => "null"
+    };
 
     // tek AppDbContext + entity başına DbSet. Provider Program.cs'te seam.
     static string DbContextFile(GenerationModel gm)
@@ -402,6 +523,10 @@ public static class DotnetEmitter
             di.Append("builder.Services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
         if (gm.Events.Count > 0)
             di.Append("builder.Services.AddScoped<IEventBus, OutboxEventBus>();\n");
+        foreach (var ext in gm.Externals)
+            di.Append($"builder.Services.AddSingleton<I{ext.Name}, {ext.Name}Client>();\n");
+        if (gm.Operations.Any(o => o.Op.Idempotent is not null))
+            di.Append("builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();\n");
         var maps = new StringBuilder();
         foreach (var op in gm.Operations)
         {

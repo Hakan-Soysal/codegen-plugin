@@ -17,8 +17,8 @@ public sealed record ManifestJson(
     List<ErrorJson> Errors,
     List<EventJson> Events,
     List<SubscriptionJson> Subscriptions,
-    List<JsonElement> Externals,   // ponytail: passthrough; Task 21'de tiplenecek
-    List<JsonElement> Uncharted,   // ponytail: passthrough; Task 21'de tiplenecek
+    List<ExternalJson> Externals,
+    List<JsonElement> Uncharted,   // ponytail: uncharted external'a benzer; minimal report (entity/type-kapsayıcı sonra)
     List<CallEdgeJson> CallEdges,
     Coverage Coverage);
 
@@ -38,17 +38,20 @@ public sealed record Idempotent(List<string> Keys);
 public sealed record PaginationKey(string Field, string Direction);
 public sealed record Pagination(string Strategy, List<PaginationKey> Keys, int? Size);
 
+public sealed record ExtJson(string Ns, string Name, Dictionary<string, JsonElement> Args);
+
 public sealed record OperationJson(
     string Id, string Module, string Visibility, string? Realizes,
     SignatureJson Signature, List<ServingJson> Serving, List<string> Roles,
     string? Ownership, AccessJson Access, List<GuardedExpr> Validation, List<GuardedExpr> Rule,
     string? Note, string? BusinessNote, Consistency Consistency, Abac? Abac,
-    List<string> Scopes, List<string> Throws, Idempotent? Idempotent, List<string> Emits, Pagination? Pagination);
+    List<string> Scopes, List<string> Throws, Idempotent? Idempotent, List<string> Emits, Pagination? Pagination,
+    List<ExtJson>? Ext = null);
 
 public sealed record SourceOfTruth(string Module, string Entity);
 public sealed record EntityFieldJson(
     string Name, string Type, bool Collection, string Cardinality, string Ref,
-    string? TargetModule, bool? CrossModule, SourceOfTruth? SourceOfTruth);
+    string? TargetModule, bool? CrossModule, SourceOfTruth? SourceOfTruth, List<ExtJson>? Ext = null);
 public sealed record EntityJson(
     string Id, string Module, List<string> Realizes, List<EntityFieldJson> Fields,
     List<GuardedExpr> Invariants, string? Concurrency);
@@ -63,4 +66,6 @@ public sealed record ConsumerRef(string Module, string Op);
 public sealed record SubscriptionJson(EventRef Event, ConsumerRef Consumer);
 public sealed record CallTarget(string System, string Op);
 public sealed record CallEdgeJson(string From, CallTarget To, string Kind, CallTarget? Compensate);
+public sealed record BoundaryOpJson(string Id, SignatureJson Signature);
+public sealed record ExternalJson(string Name, bool Generated, List<BoundaryOpJson> Operations);
 public sealed record Coverage(List<string> UnrealizedBusinessOps, List<string> UncoveredEntities);

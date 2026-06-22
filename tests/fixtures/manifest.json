@@ -40,9 +40,13 @@
             "abac": null,
             "scopes": [],
             "throws": ["DuplicateInvoice"],
-            "idempotent": null,
+            "idempotent": { "keys": ["customerId"] },
             "emits": ["InvoiceCreated"],
-            "pagination": null
+            "pagination": null,
+            "ext": [
+                { "ns": "audit", "name": "logged", "args": { "category": "financial" } },
+                { "ns": "metric", "name": "emit", "args": { "name": "invoice_created", "kind": "counter" } }
+            ]
         },
         {
             "id": "GetInvoice",
@@ -108,7 +112,10 @@
             "realizes": ["biz.Invoice"],
             "fields": [
                 { "name": "id", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
-                { "name": "customerId", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
+                { "name": "customerId", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar", "ext": [
+                    { "ns": "crypto", "name": "encrypted", "args": {} },
+                    { "ns": "sensitivity", "name": "tag", "args": { "level": "pii" } }
+                ] },
                 { "name": "amount", "type": "Decimal", "collection": false, "cardinality": "one", "ref": "scalar" },
                 { "name": "status", "type": "InvoiceStatus", "collection": false, "cardinality": "one", "ref": "enum" },
                 { "name": "createdAt", "type": "DateTime", "collection": false, "cardinality": "one", "ref": "scalar" }
@@ -136,8 +143,15 @@
         ] }
     ],
     "subscriptions": [],
-    "externals": [],
+    "externals": [
+        { "name": "PaymentGateway", "generated": false, "operations": [
+            { "id": "charge", "signature": { "params": [{ "name": "amount", "type": "Decimal", "collection": false }], "returns": "ID" } },
+            { "id": "refund", "signature": { "params": [{ "name": "chargeId", "type": "ID", "collection": false }], "returns": "Bool" } }
+        ] }
+    ],
     "uncharted": [],
-    "callEdges": [],
+    "callEdges": [
+        { "from": "CreateInvoice", "to": { "system": "PaymentGateway", "op": "charge" }, "kind": "external", "compensate": { "system": "PaymentGateway", "op": "refund" } }
+    ],
     "coverage": { "unrealizedBusinessOps": [], "uncoveredEntities": [] }
 }

@@ -16,6 +16,8 @@ public sealed record GenerationModel(
     IReadOnlyList<EventJson> Events,
     IReadOnlyList<SubscriptionJson> Subscriptions,
     IReadOnlyList<ErrorJson> Errors,
+    IReadOnlyList<ExternalJson> Externals,
+    IReadOnlyList<CallEdgeJson> CallEdges,
     TypeEnv Env);
 
 /// <summary>
