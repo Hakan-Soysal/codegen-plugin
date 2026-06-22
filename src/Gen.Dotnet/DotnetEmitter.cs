@@ -45,6 +45,7 @@ public static class DotnetEmitter
 
         foreach (var module in gm.Modules)
         {
+            report.Realized("module", module.Name);   // module = namespace + dizin (container artefaktı)
             var dir = Path.Combine(src, module.Name);
             Directory.CreateDirectory(dir);
 
@@ -56,7 +57,7 @@ public static class DotnetEmitter
             if (module.Ext is { Count: > 0 })
                 WriteAlways(Path.Combine(dir, "Module.g.cs"),
                     $"namespace {Root}.{module.Name};\n\n// module-level cross-cutting prelude'lar (realizasyon = §8 policy).\n{ExtComment(module.Ext, module.Name, report)}");
-            if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events));
+            if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events, report));
             if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types, report));
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities, report));
             foreach (var e in entities)
@@ -89,6 +90,8 @@ public static class DotnetEmitter
                 var consistency = ConsistencyPartial(module.Name, op, report);
                 if (consistency is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Consistency.g.cs"), consistency);
                 if (op.Op.Note is not null) report.Realized("note", op.Id);
+                report.Realized("visibility", op.Id);   // exposed → REST map (Program); internal → route YOK (aşağıda gate'lenir)
+                if (op.Op.Visibility == "internal") report.Policy("visibility", "internal → public route emit edilmez (subscription/trigger/calls ile erişilir)");
                 foreach (var s in op.Op.Serving)
                 {
                     if (s.Protocol == "rest") report.Realized("serving", $"{op.Id}:{s.Protocol}");   // artefakt = Program.cs map (MapLine)
@@ -212,7 +215,10 @@ public static class DotnetEmitter
                 sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
             }
             if (e.Concurrency == "optimistic")
+            {
+                report.Realized("concurrency", e.Id);   // optimistic → [Timestamp] RowVersion
                 sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
+            }
             sb.Append("}\n\n");
         }
         return sb.ToString();
@@ -364,6 +370,7 @@ public static class DotnetEmitter
             // boundary serving (external'ın protokol-maruziyeti; çağıran-tarafı için metadata) + caller-side validation (INV-4).
             foreach (var b in ext.Operations)
             {
+                foreach (var p in b.Signature.Params) sb.Append(ExtComment(p.Ext, $"{ext.Name}.{b.Id}.{p.Name}", report));   // boundary param ext
                 foreach (var s in b.Serving ?? new())
                 {
                     report.Realized("serving", $"{ext.Name}.{b.Id}:{s.Protocol}");
@@ -699,12 +706,13 @@ public static class DotnetEmitter
     }
 
     // ── event / emits / on (Task 11) ─────────────────────────────────────
-    static string EventsFile(string module, List<EventJson> events)
+    static string EventsFile(string module, List<EventJson> events, BuildReport report)
     {
         var sb = new StringBuilder();
         sb.Append($"namespace {Root}.{module};\n\n");
         foreach (var e in events)
         {
+            foreach (var f in e.Payload) sb.Append(ExtComment(f.Ext, $"{e.Id}.{f.Name}", report));   // event payload field ext
             var props = string.Join(", ", e.Payload.Select(f => $"{Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)}"));
             sb.Append($"public sealed record {e.Id}({props});\n\n");
         }
@@ -799,7 +807,8 @@ public static class DotnetEmitter
         var paramExt = string.Concat(op.Op.Signature.Params.Select(p =>
             p.Ext is { Count: > 0 } ? $"// {Naming.Pascal(p.Name)}: {ExtComment(p.Ext, $"{op.Id}.{p.Name}", report).Replace("// ", "").TrimEnd()}\n" : ""));
         // note → handler üstü XML doc-comment (op.note); business-note ayrı satır.
-        var doc = op.Op.Note is null ? "" : $"/// <summary>{XmlEscape(op.Op.Note)}</summary>\n";
+        var visibility = $"// visibility: {op.Op.Visibility}\n";
+        var doc = op.Op.Note is null ? visibility : $"{visibility}/// <summary>{XmlEscape(op.Op.Note)}</summary>\n";
         return
             $$"""
             using {{Root}};
@@ -861,8 +870,9 @@ public static class DotnetEmitter
             di.Append($"builder.Services.AddScoped<{op.Id}Handler>();\n");
             foreach (var t in op.Op.Ext?.Where(e => e.Ns == "trigger") ?? Enumerable.Empty<ExtJson>())
                 di.Append($"builder.Services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
-            foreach (var s in op.Op.Serving)
-                maps.Append(MapLine(op, s));
+            if (op.Op.Visibility != "internal")   // internal op → public route YOK (visibility semantiği)
+                foreach (var s in op.Op.Serving)
+                    maps.Append(MapLine(op, s));
         }
 
         return

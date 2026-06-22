@@ -24,7 +24,8 @@
                 "returns": "Invoice"
             },
             "serving": [
-                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "POST" }, { "kind": "string", "value": "/invoices" }], "raw": "@rest POST '/invoices'" }
+                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "POST" }, { "kind": "string", "value": "/invoices" }], "raw": "@rest POST '/invoices'" },
+                { "protocol": "grpc", "args": [], "raw": "@grpc()" }
             ],
             "roles": ["Clerk"],
             "ownership": null,
@@ -118,10 +119,7 @@
                 ],
                 "returns": "AuditLog"
             },
-            "serving": [
-                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "POST" }, { "kind": "string", "value": "/audit" }], "raw": "@rest POST '/audit'" },
-                { "protocol": "grpc", "args": [], "raw": "@grpc()" }
-            ],
+            "serving": [],
             "roles": ["Auditor"],
             "ownership": "own",
             "access": { "reads": [], "creates": ["AuditLog"], "updates": [], "deletes": [] },
@@ -200,7 +198,7 @@
     ],
     "events": [
         { "id": "InvoiceCreated", "module": "Billing", "payload": [
-            { "name": "invoiceId", "type": "ID", "collection": false },
+            { "name": "invoiceId", "type": "ID", "collection": false, "ext": [ { "ns": "sensitivity", "name": "tag", "args": { "level": "low" } } ] },
             { "name": "amount", "type": "Money", "collection": false }
         ] }
     ],
@@ -210,7 +208,7 @@
     "externals": [
         { "name": "PaymentGateway", "generated": false, "operations": [
             { "id": "charge",
-              "signature": { "params": [{ "name": "amount", "type": "Decimal", "collection": false }], "returns": "ID" },
+              "signature": { "params": [{ "name": "amount", "type": "Decimal", "collection": false, "ext": [ { "ns": "sensitivity", "name": "tag", "args": {} } ] }], "returns": "ID" },
               "serving": [ { "protocol": "rest", "args": [], "raw": "@rest()" } ],
               "validation": [ { "text": "amount > 0", "ast": { "node": "cmp", "op": ">", "left": { "path": ["amount"] }, "right": { "kind": "number", "value": 0 } } } ]
             },

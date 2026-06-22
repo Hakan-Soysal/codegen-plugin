@@ -13,8 +13,10 @@ public static class Completeness
     {
         var x = new List<(string, string)>();
 
+        // N/A (build-time türev/girdi; emit edilebilir construct değil): standalone/contract/import/rolemap/
+        // extension-decl/realizes (join), access (→ IsCommand + DbSet türevi), pureTechnical (rolemap türevi).
         foreach (var d in m.Deployables) { x.Add(("deployable", d.Name)); AddExt(x, d.Ext, d.Name); }
-        foreach (var mod in m.Modules) AddExt(x, mod.Ext, mod.Name);
+        foreach (var mod in m.Modules) { x.Add(("module", mod.Name)); AddExt(x, mod.Ext, mod.Name); }
         foreach (var e in m.Errors) x.Add(("error", e.Id));
         foreach (var ext in m.Externals)
         {
@@ -24,18 +26,20 @@ public static class Completeness
                 x.Add(("boundary-op", $"{ext.Name}.{b.Id}"));
                 if (b.Validation is { Count: > 0 }) x.Add(("validation", $"{ext.Name}.{b.Id}"));
                 foreach (var s in b.Serving ?? new()) x.Add(("serving", $"{ext.Name}.{b.Id}:{s.Protocol}"));
+                foreach (var p in b.Signature.Params) AddExt(x, p.Ext, $"{ext.Name}.{b.Id}.{p.Name}");
             }
         }
         foreach (var u in m.Uncharted) x.Add(("uncharted", u.Name));
         foreach (var s in m.Subscriptions) x.Add(("subscription", s.Event.Name));
         foreach (var ce in m.CallEdges) { x.Add(("calls", ce.From)); if (ce.Compensate is not null) x.Add(("compensate", ce.From)); }
-        foreach (var ev in m.Events) x.Add(("event", ev.Id));
+        foreach (var ev in m.Events) { x.Add(("event", ev.Id)); foreach (var f in ev.Payload) AddExt(x, f.Ext, $"{ev.Id}.{f.Name}"); }
         foreach (var t in m.Types) { x.Add((t.Kind, t.Id)); AddExt(x, t.Ext, t.Id); foreach (var f in t.Fields ?? new()) AddExt(x, f.Ext, $"{t.Id}.{f.Name}"); }
 
         foreach (var en in m.Entities)
         {
             x.Add(("entity", en.Id));
             AddExt(x, en.Ext, en.Id);
+            if (en.Concurrency == "optimistic") x.Add(("concurrency", en.Id));
             if (en.Invariants.Count > 0) x.Add(("invariant", en.Id));
             if (en.Invariants.Any(g => g.GuardRef is not null)) x.Add(("guardRef", en.Id));
             foreach (var f in en.Fields)
@@ -48,6 +52,7 @@ public static class Completeness
         foreach (var op in m.Operations)
         {
             x.Add(("operation", op.Id));
+            x.Add(("visibility", op.Id));   // exposed/internal (manifest'te serving varlığından türer)
             if (op.Roles.Count > 0) x.Add(("roles", op.Id));
             if (op.Scopes.Count > 0) x.Add(("scopes", op.Id));
             if (op.Ownership is not null) x.Add(("ownership", op.Id));
