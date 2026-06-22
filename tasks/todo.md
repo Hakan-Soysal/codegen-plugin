@@ -16,8 +16,8 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [x] ▸ Checkpoint: Walking skeleton (üretilen app DERLENİYOR)
 
 ## Phase 3 — ExprNode → C# predicate
-- [ ] Task 7 · ExprNode → C# emitter + test (M)
-- [ ] Task 8 · validation/rule/permit/invariant → predicate gövdesi (S)
+- [x] Task 7 · ExprNode → C# emitter + test (M)
+- [x] Task 8 · validation/rule/permit/invariant → predicate gövdesi (S)
 
 ## Phase 4 — .NET core constructs
 - [ ] Task 9 · entity/field/sourceOfTruth/concurrency → EF entity (M)

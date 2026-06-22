@@ -35,11 +35,18 @@ public static class DotnetEmitter
             var entities = gm.Entities.Where(e => e.Module == module.Name).ToList();
             if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types));
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities));
+            foreach (var e in entities)
+            {
+                var inv = InvariantsFile(module.Name, e, report);
+                if (inv is not null) WriteAlways(Path.Combine(dir, $"{e.Id}.Invariants.g.cs"), inv);
+            }
 
             foreach (var op in gm.Operations.Where(o => o.Module == module.Name))
             {
                 WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op));
                 WriteIfAbsent(Path.Combine(dir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
+                var guards = GuardsFile(module.Name, op, report);
+                if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
                 report.Realized("operation", op.Id);
             }
         }
@@ -131,6 +138,82 @@ public static class DotnetEmitter
         }
         return sb.ToString();
     }
+
+    // ── guard/invariant predicate'leri (Task 8, INV-4) ───────────────────
+    static string? GuardsFile(string module, GmOperation op, BuildReport report)
+    {
+        var preds = new List<string>();
+        for (var i = 0; i < op.Op.Validation.Count; i++)
+            preds.Add(Predicate("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text, op.Id, report));
+        for (var i = 0; i < op.Op.Rule.Count; i++)
+            preds.Add(Predicate("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text, op.Id, report));
+        if (op.Op.Abac is not null)
+            preds.Add(Predicate("Permit", 0, op.Op.Abac.Permit, op.Op.Abac.Permit.ToString() ?? "permit", op.Id, report));
+        if (preds.Count == 0) return null;
+
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // validation→NotValid(400) · rule→NotProcessable(422) · permit→authz.
+            // ponytail: dynamic ctx (request/resource/actor); yapısal şekil emit, tip-bağlama insan seam'i.
+            public partial class {{op.Id}}Handler
+            {
+            {{string.Join("\n", preds)}}
+            }
+
+            """;
+    }
+
+    static string Predicate(string kind, int i, Gen.Core.Model.ExprNode ast, string text, string opId, BuildReport report)
+    {
+        var key = $"{opId}#{kind}{i}";
+        try
+        {
+            var expr = ExprEmit.Emit(ast);
+            report.Realized(kind.ToLowerInvariant(), key);
+            return $"    static bool {kind}_{i}(dynamic request, dynamic resource, dynamic actor) => {expr};";
+        }
+        catch (Gen.Core.UnsupportedConstruct e)
+        {
+            report.Unsupported(kind.ToLowerInvariant(), key, e.Message);
+            return $"    static bool {kind}_{i}(dynamic request, dynamic resource, dynamic actor) => throw new NotImplementedException(\"unsupported: {Escape(text)}\");";
+        }
+    }
+
+    static string? InvariantsFile(string module, EntityJson e, BuildReport report)
+    {
+        if (e.Invariants.Count == 0) return null;
+        var preds = new List<string>();
+        for (var i = 0; i < e.Invariants.Count; i++)
+        {
+            var key = $"{e.Id}#inv{i}";
+            try
+            {
+                var expr = ExprEmit.Emit(e.Invariants[i].Ast, "entity");
+                report.Realized("invariant", key);
+                preds.Add($"    public static bool Check_{i}(dynamic entity) => {expr};");
+            }
+            catch (Gen.Core.UnsupportedConstruct ex)
+            {
+                report.Unsupported("invariant", key, ex.Message);
+                preds.Add($"    public static bool Check_{i}(dynamic entity) => throw new NotImplementedException(\"unsupported: {Escape(e.Invariants[i].Text)}\");");
+            }
+        }
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // entity invariant'ları (kalıcı veri-bütünlüğü). ponytail: dynamic entity; EF model-validation/DB CHECK Task 9'da.
+            public static class {{e.Id}}Invariants
+            {
+            {{string.Join("\n", preds)}}
+            }
+
+            """;
+    }
+
+    static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     static string RequestName(GmOperation op) => op.IsCommand ? $"{op.Id}Command" : $"{op.Id}Query";
 
