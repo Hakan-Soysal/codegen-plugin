@@ -76,6 +76,44 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    static ExtJson Ext(string ns, string name) => new(ns, name, new Dictionary<string, System.Text.Json.JsonElement>());
+
+    // ── C1 — ext on every annotation-site ─────────────────────────────────
+    [Fact]
+    public void Ext_realized_on_all_annotation_sites()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var mod = m.Modules[0] with { Ext = new() { Ext("audit", "trace") } };
+            var money = m.Types.First(t => t.Id == "Money");
+            var moneyExt = money with
+            {
+                Ext = new() { Ext("schema", "versioned") },
+                Fields = money.Fields!.Select(f => f.Name == "amount" ? f with { Ext = new() { Ext("metric", "gauge") } } : f).ToList()
+            };
+            var inv = m.Entities[0] with { Ext = new() { Ext("audit", "table") } };
+            var create = Op(m, "CreateInvoice");
+            var createExt = create with
+            {
+                Signature = create.Signature with
+                {
+                    Params = create.Signature.Params.Select(p => p.Name == "customerId" ? p with { Ext = new() { Ext("sensitivity", "pii") } } : p).ToList()
+                }
+            };
+            return WithOp(m with { Modules = new() { mod }, Types = m.Types.Select(t => t.Id == "Money" ? moneyExt : t).ToList(), Entities = new() { inv } }, createExt);
+        });
+        try
+        {
+            Assert.True(report.Covers("@audit.trace", "Billing"));          // module
+            Assert.True(report.Covers("@schema.versioned", "Money"));       // type
+            Assert.True(report.Covers("@metric.gauge", "Money.amount"));    // type-field
+            Assert.True(report.Covers("@audit.table", "Invoice"));          // entity
+            Assert.True(report.Covers("@sensitivity.pii", "CreateInvoice.customerId")); // op-param
+            Assert.Empty(report.SilentDrops.Where(d => d.Construct.StartsWith("@")));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── B4 — note → doc-comment ───────────────────────────────────────────
     [Fact]
     public void Note_emits_xml_doc_comment_on_handler()

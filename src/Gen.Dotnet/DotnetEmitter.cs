@@ -48,8 +48,11 @@ public static class DotnetEmitter
             var events = gm.Events.Where(e => e.Module == module.Name).ToList();
             var errors = gm.Errors.Where(e => e.Module == module.Name).ToList();
             if (errors.Count > 0) WriteAlways(Path.Combine(dir, "Errors.g.cs"), ErrorsFile(module.Name, errors, report));
+            if (module.Ext is { Count: > 0 })
+                WriteAlways(Path.Combine(dir, "Module.g.cs"),
+                    $"namespace {Root}.{module.Name};\n\n// module-level cross-cutting prelude'lar (realizasyon = §8 policy).\n{ExtComment(module.Ext, module.Name, report)}");
             if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events));
-            if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types));
+            if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types, report));
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities, report));
             foreach (var e in entities)
             {
@@ -59,7 +62,7 @@ public static class DotnetEmitter
 
             foreach (var op in gm.Operations.Where(o => o.Module == module.Name))
             {
-                WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op));
+                WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op, report));
                 WriteIfAbsent(Path.Combine(dir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
                 var guards = GuardsFile(module.Name, op, gm, report);
                 if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
@@ -148,12 +151,14 @@ public static class DotnetEmitter
 
         """;
 
-    static string TypesFile(string module, List<TypeJson> types)
+    static string TypesFile(string module, List<TypeJson> types, BuildReport report)
     {
         var sb = new StringBuilder();
         sb.Append($"namespace {Root}.{module};\n\n");
         foreach (var t in types)
         {
+            sb.Append(ExtComment(t.Ext, t.Id, report));
+            foreach (var f in t.Fields ?? new()) sb.Append(ExtComment(f.Ext, $"{t.Id}.{f.Name}", report));
             if (t.Kind == "enum")
                 sb.Append($"public enum {t.Id} {{ {string.Join(", ", t.Values ?? new())} }}\n\n");
             else
@@ -173,6 +178,7 @@ public static class DotnetEmitter
         sb.Append($"namespace {Root}.{module};\n\n");
         foreach (var e in entities)
         {
+            sb.Append(ExtComment(e.Ext, e.Id, report));
             sb.Append($"public class {e.Id}\n{{\n");
             foreach (var f in e.Fields)
             {
@@ -529,6 +535,15 @@ public static class DotnetEmitter
     static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     static string XmlEscape(string s) => s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    // ext passthrough → yorum + census kaydı (her annotation-site ortak; realizasyon = §8 policy).
+    // owner census AddExt ile aynı: type→Id, type-field→"Id.field", entity→Id, op-param→"opId.param", module→name.
+    static string ExtComment(List<ExtJson>? ext, string owner, BuildReport report, string indent = "")
+    {
+        if (ext is not { Count: > 0 }) return "";
+        foreach (var x in ext) { report.Realized($"@{x.Ns}.{x.Name}", owner); report.Policy($"{x.Ns}-realization", "annotation/interceptor (generator-policy)"); }
+        return $"{indent}// ext: {string.Join(" ; ", ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)\n";
+    }
+
     // ── event / emits / on (Task 11) ─────────────────────────────────────
     static string EventsFile(string module, List<EventJson> events)
     {
@@ -602,13 +617,16 @@ public static class DotnetEmitter
         return string.Join(", ", fields);
     }
 
-    static string OperationFile(string module, GmOperation op)
+    static string OperationFile(string module, GmOperation op, BuildReport report)
     {
         var req = RequestName(op);
         var ret = ReturnType(op);
         var pageComment = op.Op.Pagination is { } p
             ? $"\n// pagination keyset: ORDER BY {string.Join(", ", p.Keys.Select(k => $"{Naming.Pascal(k.Field)} {k.Direction}"))} (keyset/offset + cursor-token = generator-policy)"
             : "";
+        // param ext → request alanı başına yorum + census kaydı (realizasyon = §8 policy).
+        var paramExt = string.Concat(op.Op.Signature.Params.Select(p =>
+            p.Ext is { Count: > 0 } ? $"// {Naming.Pascal(p.Name)}: {ExtComment(p.Ext, $"{op.Id}.{p.Name}", report).Replace("// ", "").TrimEnd()}\n" : ""));
         // note → handler üstü XML doc-comment (op.note); business-note ayrı satır.
         var doc = op.Op.Note is null ? "" : $"/// <summary>{XmlEscape(op.Op.Note)}</summary>\n";
         return
@@ -617,7 +635,7 @@ public static class DotnetEmitter
 
             namespace {{Root}}.{{module}};
             {{pageComment}}
-            public sealed record {{req}}({{RequestFields(op)}});
+            {{paramExt}}public sealed record {{req}}({{RequestFields(op)}});
 
             {{doc}}public partial class {{op.Id}}Handler
             {
