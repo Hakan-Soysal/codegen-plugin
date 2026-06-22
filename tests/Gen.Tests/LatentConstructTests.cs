@@ -77,6 +77,33 @@ public class LatentConstructTests
     }
 
     static ExtJson Ext(string ns, string name) => new(ns, name, new Dictionary<string, System.Text.Json.JsonElement>());
+    static System.Text.Json.JsonElement JStr(string s) => System.Text.Json.JsonDocument.Parse($"\"{s}\"").RootElement.Clone();
+    static ExtJson ExtArgs(string ns, string name, params (string k, string v)[] args) =>
+        new(ns, name, args.ToDictionary(a => a.k, a => JStr(a.v)));
+
+    // ── D4 — @http/@trigger → target stubs (resolved Q2) ──────────────────
+    [Fact]
+    public void Http_and_trigger_emit_target_stubs()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var create = Op(m, "CreateInvoice");
+            var ext = new List<ExtJson> { Ext("trigger", "cron"), ExtArgs("http", "endpoint", ("route", "/invoices"), ("method", "POST")) };
+            return WithOp(m, create with { Ext = ext });
+        });
+        try
+        {
+            var trig = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Trigger.g.cs"));
+            Assert.Contains("public sealed class CreateInvoiceCronTrigger", trig);
+            Assert.Contains(": IHostedService", trig);
+            var extf = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Ext.g.cs"));
+            Assert.Contains("public const string HttpRoute = \"/invoices\";", extf);
+            Assert.Contains("public const string HttpMethod = \"POST\";", extf);
+            Assert.True(report.Covers("@trigger.cron", "CreateInvoice"));
+            Assert.True(report.Covers("@http.endpoint", "CreateInvoice"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 
     // ── C1 — ext on every annotation-site ─────────────────────────────────
     [Fact]

@@ -25,7 +25,7 @@ Sıra: risk-first. Gate önce (drop'ları RED'e çevirir), sonra fix → yeşile
 - [x] D1 · serving @grpc/@queue → UnsupportedConstruct+report (sessiz değil) (S)
 - [x] D2 · external BoundaryOp serving+validation AST (INV-4) (S)
 - [x] D3 · on/subscriptions → consumer wiring (M)
-- [ ] D4 · @http/@trigger → hedef-stub + policy (M) — Open Q2
+- [x] D4 · @http/@trigger → hedef-stub + policy (M) — Open Q2
 
 ## Phase E — Tam fixture + final gate
 - [ ] E1 · full-coverage fixture (her keyword) (M)

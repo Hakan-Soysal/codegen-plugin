@@ -82,6 +82,8 @@ public static class DotnetEmitter
                 }
                 var ext = ExtPartial(module.Name, op, report);
                 if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
+                var trigger = TriggerPartial(module.Name, op, report);
+                if (trigger is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Trigger.g.cs"), trigger);
                 var throws = ThrowsPartial(module.Name, op, gm, report);
                 if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
                 var consistency = ConsistencyPartial(module.Name, op, report);
@@ -499,6 +501,25 @@ public static class DotnetEmitter
 
         """;
 
+    // @trigger.* → inbound hosted-service stub (kind = cron/queue/webhook/file/stream). D4 (resolved Q2: minimal).
+    // ext realize'ı ExtPartial yapar; burada hedef-özel IHostedService artefaktı + trigger-wiring policy.
+    static string? TriggerPartial(string module, GmOperation op, BuildReport report)
+    {
+        var triggers = op.Op.Ext?.Where(e => e.Ns == "trigger").ToList() ?? new();
+        if (triggers.Count == 0) return null;
+        report.Policy("trigger-wiring", "IHostedService stub; scheduler/consumer/watcher + ack/checkpoint/batch = §8 seam");
+        var classes = triggers.Select(t =>
+            $$"""
+            // @trigger.{{t.Name}} → inbound hosted-service stub (ack/checkpoint/batch = §8 seam).
+            public sealed class {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger({{op.Id}}Handler handler) : IHostedService
+            {
+                public Task StartAsync(CancellationToken ct) => throw new NotImplementedException($"trigger {{t.Name}}: {{op.Id}} inbound wiring ({nameof(handler)}.ExecuteAsync)");
+                public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+            }
+            """);
+        return $"using Microsoft.Extensions.Hosting;\n\nnamespace {Root}.{module};\n\n" + string.Join("\n\n", classes) + "\n";
+    }
+
     static string? ExtPartial(string module, GmOperation op, BuildReport report)
     {
         if (op.Op.Ext is not { Count: > 0 }) return null;
@@ -513,6 +534,16 @@ public static class DotnetEmitter
         var metric = op.Op.Ext.FirstOrDefault(e => e.Ns == "metric");
         if (audit is not null && audit.Args.TryGetValue("category", out var cat)) lines.Add($"    public const string AuditCategory = {JsonStr(cat)};");
         if (metric is not null && metric.Args.TryGetValue("name", out var mn)) lines.Add($"    public const string MetricName = {JsonStr(mn)};");
+        // @http.* → REST binding ince-detayı (route/query/header). D4 (resolved Q2: minimal).
+        var http = op.Op.Ext.FirstOrDefault(e => e.Ns == "http");
+        if (http is not null)
+        {
+            report.Policy("http-binding", "route/query/header detail (generator-policy)");
+            if (http.Args.TryGetValue("route", out var rt)) lines.Add($"    public const string HttpRoute = {JsonStr(rt)};");
+            if (http.Args.TryGetValue("method", out var hm)) lines.Add($"    public const string HttpMethod = {JsonStr(hm)};");
+            if (http.Args.TryGetValue("query", out var hq)) lines.Add($"    public const string HttpQuery = {JsonStr(hq)};");
+            if (http.Args.TryGetValue("header", out var hh)) lines.Add($"    public const string HttpHeader = {JsonStr(hh)};");
+        }
         return
             $$"""
             namespace {{Root}}.{{module}};
@@ -828,6 +859,8 @@ public static class DotnetEmitter
         foreach (var op in gm.Operations)
         {
             di.Append($"builder.Services.AddScoped<{op.Id}Handler>();\n");
+            foreach (var t in op.Op.Ext?.Where(e => e.Ns == "trigger") ?? Enumerable.Empty<ExtJson>())
+                di.Append($"builder.Services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
             foreach (var s in op.Op.Serving)
                 maps.Append(MapLine(op, s));
         }
