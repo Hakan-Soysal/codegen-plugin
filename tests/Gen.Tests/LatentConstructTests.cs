@@ -114,6 +114,28 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── C3 — sourceOfTruth → cross-module FK ──────────────────────────────
+    [Fact]
+    public void SourceOfTruth_emits_cross_module_fk_comment_no_navigation()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var inv = m.Entities[0];
+            var fields = inv.Fields.Select(f => f.Name == "customerId"
+                ? f with { SourceOfTruth = new SourceOfTruth("Customers", "Customer") } : f).ToList();
+            return m with { Entities = new() { inv with { Fields = fields } } };
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs"));
+            Assert.Contains("sourceOfTruth: Customers.Customer", f);
+            Assert.DoesNotContain("public Customer Customer", f);   // navigasyon AÇILMAZ
+            Assert.True(report.Covers("sourceOfTruth", "Invoice.customerId"));
+            NoDrop(report, "sourceOfTruth", "Invoice.customerId");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── C2 — uncharted typed model + call-adapter ─────────────────────────
     [Fact]
     public void Uncharted_emits_call_adapter_and_owned_model()

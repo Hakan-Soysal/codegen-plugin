@@ -192,6 +192,12 @@ public static class DotnetEmitter
                     foreach (var x in f.Ext) { report.Realized($"@{x.Ns}.{x.Name}", $"{e.Id}.{f.Name}"); report.Policy($"{x.Ns}-realization", "EF value-converter/attribute (generator-policy)"); }
                     sb.Append($"    // {string.Join(" ; ", f.Ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)\n");
                 }
+                if (f.SourceOfTruth is { } sot)
+                {
+                    report.Realized("sourceOfTruth", $"{e.Id}.{f.Name}");
+                    report.Policy("source-of-truth", "cross-module FK reference; no navigation (generator-policy)");
+                    sb.Append($"    // sourceOfTruth: {sot.Module}.{sot.Entity} — cross-module FK (kanonik veri orada; navigasyon AÇILMAZ).\n");
+                }
                 sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
             }
             if (e.Concurrency == "optimistic")
