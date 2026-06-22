@@ -460,7 +460,7 @@ public static class DotnetEmitter
                 sb.Append(ExtComment(f.Ext, $"{u.Name}.{e.Id}.{f.Name}", report, "    "));
                 sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
             }
-            if (e.Concurrency == "optimistic") sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
+            if (e.Concurrency == "optimistic") { report.Realized("concurrency", $"{u.Name}.{e.Id}"); sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n"); }
             sb.Append("}\n\n");
         }
         string Sig(BoundaryOpJson b)
@@ -470,11 +470,22 @@ public static class DotnetEmitter
             return $"Task<{Naming.Type(b.Signature.Returns, false)}> {Naming.Pascal(b.Id)}({ps}{comma}CancellationToken ct = default)";
         }
         sb.Append($"public interface I{u.Name}\n{{\n");
-        foreach (var b in u.Operations) sb.Append($"    {Sig(b)};\n");
+        foreach (var b in u.Operations) { report.Realized("boundary-op", $"{u.Name}.{b.Id}"); sb.Append($"    {Sig(b)};\n"); }
         sb.Append("}\n\n");
         sb.Append($"public sealed class {u.Name}Client : I{u.Name}\n{{\n");
         foreach (var b in u.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{u.Name}.{b.Id}\");\n");
-        sb.Append("}\n");
+        sb.Append("}\n\n");
+        // uncharted boundary-op: serving (protokol metadata) + param-ext + caller-side validation (external emsali; INV-4)
+        foreach (var b in u.Operations)
+        {
+            foreach (var p in b.Signature.Params) sb.Append(ExtComment(p.Ext, $"{u.Name}.{b.Id}.{p.Name}", report));
+            foreach (var s in b.Serving ?? new())
+            {
+                report.Realized("serving", $"{u.Name}.{b.Id}:{s.Protocol}");
+                sb.Append($"// boundary serving: {u.Name}.{b.Id} via {s.Protocol} (transport = client adapter sorumluluğu).\n");
+            }
+            if (b.Validation is { Count: > 0 }) sb.Append(BoundaryValidation(u.Name, b, report));
+        }
         return sb.ToString();
     }
 

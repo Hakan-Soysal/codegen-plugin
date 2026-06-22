@@ -31,7 +31,18 @@ public static class Completeness
                 foreach (var p in b.Signature.Params) AddExt(x, p.Ext, $"{ext.Name}.{b.Id}.{p.Name}");
             }
         }
-        foreach (var u in m.Uncharted) x.Add(("uncharted", u.Name));
+        foreach (var u in m.Uncharted)
+        {
+            x.Add(("uncharted", u.Name));
+            foreach (var b in u.Operations)   // uncharted boundary-op alt-ağacı (external emsali)
+            {
+                x.Add(("boundary-op", $"{u.Name}.{b.Id}"));
+                if (b.Validation is { Count: > 0 }) x.Add(("validation", $"{u.Name}.{b.Id}"));
+                foreach (var s in b.Serving ?? new()) x.Add(("serving", $"{u.Name}.{b.Id}:{s.Protocol}"));
+                foreach (var p in b.Signature.Params) AddExt(x, p.Ext, $"{u.Name}.{b.Id}.{p.Name}");
+            }
+            foreach (var e in u.Entities) if (e.Concurrency == "optimistic") x.Add(("concurrency", $"{u.Name}.{e.Id}"));
+        }
         foreach (var s in m.Subscriptions) x.Add(("subscription", s.Event.Name));
         foreach (var ce in m.CallEdges) { x.Add(("calls", ce.From)); if (ce.Compensate is not null) x.Add(("compensate", ce.From)); }
         foreach (var ev in m.Events) { x.Add(("event", ev.Id)); foreach (var f in ev.Payload) AddExt(x, f.Ext, $"{ev.Id}.{f.Name}"); }

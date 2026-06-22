@@ -242,6 +242,36 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── F1 — uncharted BoundaryOp serving/validation/param-ext (gate-blind fix) ──
+    [Fact]
+    public void Uncharted_boundary_op_serving_validation_paramext_realized()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var u = m.Uncharted[0];
+            var op = u.Operations[0];
+            var p0 = op.Signature.Params[0] with { Ext = new() { Ext("ucparam", "tag") } };
+            var op2 = op with
+            {
+                Serving = new() { new ServingJson("rest", new(), "@rest()") },
+                Validation = new() { new GuardedExpr("amount > 0", op.Validation?.FirstOrDefault()?.Ast ?? Op(m, "CreateInvoice").Validation[0].Ast, null) },
+                Signature = op.Signature with { Params = new() { p0 } }
+            };
+            return m with { Uncharted = new() { u with { Operations = new() { op2 } } } };
+        });
+        try
+        {
+            Assert.True(report.Covers("serving", "LegacyLedger.post:rest"));
+            Assert.True(report.Covers("validation", "LegacyLedger.post"));
+            Assert.True(report.Covers("@ucparam.tag", "LegacyLedger.post.amount"));
+            Assert.True(report.Covers("boundary-op", "LegacyLedger.post"));
+            NoDrop(report, "serving", "LegacyLedger.post:rest");
+            NoDrop(report, "validation", "LegacyLedger.post");
+            NoDrop(report, "@ucparam.tag", "LegacyLedger.post.amount");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── C3 — sourceOfTruth → cross-module FK ──────────────────────────────
     [Fact]
     public void SourceOfTruth_emits_cross_module_fk_comment_no_navigation()
