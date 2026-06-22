@@ -21,11 +21,6 @@ public static class DotnetEmitter
         Directory.CreateDirectory(src);
 
         WriteAlways(Path.Combine(outDir, "App.csproj"), Csproj());
-        if (gm.Deployables.Count > 0)
-        {
-            Directory.CreateDirectory(Path.Combine(outDir, "deploy"));
-            WriteAlways(Path.Combine(outDir, "deploy", "docker-compose.yml"), ComposeFile(gm, report));
-        }
         WriteAlways(Path.Combine(src, "Result.g.cs"), ResultTypes());        // Task 6
         WriteAlways(Path.Combine(src, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
 
@@ -36,6 +31,8 @@ public static class DotnetEmitter
         foreach (var ev in gm.Events) report.Realized("event", ev.Id);
         foreach (var s in gm.Subscriptions) report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
 
+        if (gm.Deployables.Count > 0)
+            WriteAlways(Path.Combine(src, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
         if (gm.Externals.Count > 0 || gm.CallEdges.Count > 0)
             WriteAlways(Path.Combine(src, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
@@ -81,6 +78,7 @@ public static class DotnetEmitter
                 if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
                 var consistency = ConsistencyPartial(module.Name, op, report);
                 if (consistency is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Consistency.g.cs"), consistency);
+                if (op.Op.Note is not null) report.Realized("note", op.Id);
                 report.Realized("operation", op.Id);
             }
         }
@@ -192,28 +190,41 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
-    // deployable → deployment topolojisi (her deployable bir compose service; units = co-hosted modüller).
-    // ponytail: tek App image; gerçek image/registry/network/orchestrator = §8 policy / insan.
-    static string ComposeFile(GenerationModel gm, BuildReport report)
+    // deployable → modular-monolith host topolojisi: her deployable, units (modüller) TEK host process'te barındırır.
+    // ponytail: tek host; ayrı-deploy gerekirse units'i ayrı host'a taşı (seam). Docker/orchestrator = §8 / insan.
+    static string HostFile(GenerationModel gm, BuildReport report)
     {
-        report.Policy("deployment-topology", "docker-compose stub (generator-policy)");
-        var sb = new StringBuilder();
-        sb.Append("# generated deployment topology (deployable → service; units = co-hosted modules).\n");
-        sb.Append("# ponytail: tek App image; gerçek image/registry/network/orchestrator = §8 / insan.\n");
-        sb.Append("services:\n");
+        report.Policy("deployment-topology", "modular-monolith host: units single-process co-hosted (generator-policy)");
+        var entries = new List<string>();
+        var extComments = new List<string>();
         foreach (var d in gm.Deployables)
         {
             report.Realized("deployable", d.Name);
             if (d.Ext is { Count: > 0 })
-                foreach (var x in d.Ext) { report.Realized($"@{x.Ns}.{x.Name}", d.Name); report.Policy($"{x.Ns}-realization", "compose annotation (generator-policy)"); }
-            sb.Append($"  {d.Name.ToLowerInvariant()}:\n");
-            sb.Append("    image: app:latest          # ponytail: build context/registry seam\n");
-            sb.Append("    environment:\n");
-            sb.Append($"      - UNITS={string.Join(",", d.Units)}   # co-hosted modules\n");
-            if (d.Ext is { Count: > 0 })
-                sb.Append($"    # ext: {string.Join(" ; ", d.Ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)\n");
+            {
+                foreach (var x in d.Ext) { report.Realized($"@{x.Ns}.{x.Name}", d.Name); report.Policy($"{x.Ns}-realization", "host annotation (generator-policy)"); }
+                extComments.Add($"    // {d.Name} ext: {string.Join(" ; ", d.Ext.Select(x => $"@{x.Ns}.{x.Name}"))} (realizasyon = policy)");
+            }
+            var units = string.Join(", ", d.Units.Select(u => $"\"{Escape(u)}\""));
+            entries.Add($"        [\"{Escape(d.Name)}\"] = [{units}],");
         }
-        return sb.ToString();
+        var ext = extComments.Count > 0 ? string.Join("\n", extComments) + "\n" : "";
+        return
+            $$"""
+            namespace {{Root}};
+
+            // modular-monolith host topolojisi: deployable → tek process'te barındırılan units (modüller).
+            // ponytail: tek host; ayrı-deploy = units'i ayrı host'a taşı (seam). Docker/orchestrator = §8 / insan.
+            public static class DeploymentTopology
+            {
+            {{ext}}    public static readonly IReadOnlyDictionary<string, string[]> Deployables =
+                new Dictionary<string, string[]>
+                {
+            {{string.Join("\n", entries)}}
+                };
+            }
+
+            """;
     }
 
     // ── adlı-hata kataloğu + throws binding (ADR-0022 K8/K9) ──────────────
@@ -516,6 +527,7 @@ public static class DotnetEmitter
     }
 
     static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    static string XmlEscape(string s) => s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     // ── event / emits / on (Task 11) ─────────────────────────────────────
     static string EventsFile(string module, List<EventJson> events)
@@ -597,6 +609,8 @@ public static class DotnetEmitter
         var pageComment = op.Op.Pagination is { } p
             ? $"\n// pagination keyset: ORDER BY {string.Join(", ", p.Keys.Select(k => $"{Naming.Pascal(k.Field)} {k.Direction}"))} (keyset/offset + cursor-token = generator-policy)"
             : "";
+        // note → handler üstü XML doc-comment (op.note); business-note ayrı satır.
+        var doc = op.Op.Note is null ? "" : $"/// <summary>{XmlEscape(op.Op.Note)}</summary>\n";
         return
             $$"""
             using {{Root}};
@@ -605,7 +619,7 @@ public static class DotnetEmitter
             {{pageComment}}
             public sealed record {{req}}({{RequestFields(op)}});
 
-            public partial class {{op.Id}}Handler
+            {{doc}}public partial class {{op.Id}}Handler
             {
                 // İş gövdesi {{op.Id}}Handler.Logic.cs'te (yoksa-üret; üreteç ezmez).
                 public partial Task<Result<{{ret}}>> ExecuteAsync({{req}} request, CancellationToken ct);

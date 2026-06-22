@@ -25,8 +25,6 @@ public class CompletenessTests
     // Set boşalınca = gate tam yeşil (Phase E hedefi).
     static readonly HashSet<string> KnownDebt = new()
     {
-        // Sınıf-1 (B fazı):
-        "note/CreateInvoice",
         // serving raporlama (D1):
         "serving/CreateInvoice:rest", "serving/GetInvoice:rest", "serving/ListInvoices:rest",
     };

@@ -11,7 +11,7 @@ Sıra: risk-first. Gate önce (drop'ları RED'e çevirir), sonra fix → yeşile
 - [x] B1 · throws + named-error catalog → tip + result binding (M)
 - [x] B2 · consistency {risk,mode} → tx/outbox seçim-iskeleti (S)
 - [x] B3 · deployable → GMDeployable + compose/AppHost stub (M)
-- [ ] B4 · note → doc-comment (S)
+- [x] B4 · note → doc-comment (S)
 - [ ] ▸ Checkpoint B: mevcut fixture'da gate YEŞİL
 
 ## Phase C — POCO completeness (latent)

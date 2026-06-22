@@ -60,18 +60,33 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
-    // ── B3 — deployable → compose stub ────────────────────────────────────
+    // ── B3 — deployable → modular-monolith host topolojisi ────────────────
     [Fact]
-    public void Deployable_emits_compose_service_per_deployable()
+    public void Deployable_emits_modular_monolith_host_topology()
     {
         var (report, dir, _) = EmitMut(m => m);   // fixture already has BillingService(units=[Billing])
         try
         {
-            var compose = File.ReadAllText(Path.Combine(dir, "deploy", "docker-compose.yml"));
-            Assert.Contains("billingservice:", compose);
-            Assert.Contains("UNITS=Billing", compose);
+            var host = File.ReadAllText(Path.Combine(dir, "src", "Host.g.cs"));
+            Assert.Contains("public static class DeploymentTopology", host);
+            Assert.Contains("[\"BillingService\"] = [\"Billing\"],", host);
             Assert.True(report.Covers("deployable", "BillingService"));
             NoDrop(report, "deployable", "BillingService");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // ── B4 — note → doc-comment ───────────────────────────────────────────
+    [Fact]
+    public void Note_emits_xml_doc_comment_on_handler()
+    {
+        var (report, dir, _) = EmitMut(m => m);   // fixture CreateInvoice has a note
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.g.cs"));
+            Assert.Contains("/// <summary>Müşteri kredi limiti dış servisten gelir.</summary>", f);
+            Assert.True(report.Covers("note", "CreateInvoice"));
+            NoDrop(report, "note", "CreateInvoice");
         }
         finally { Directory.Delete(dir, true); }
     }
