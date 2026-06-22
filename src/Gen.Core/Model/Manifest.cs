@@ -23,10 +23,10 @@ public sealed record ManifestJson(
     Coverage Coverage);
 
 public sealed record Meta(bool HasErrors, int ErrorCount);
-public sealed record Deployable(string Name, List<string> Units);
-public sealed record ModuleDecl(string Name, bool PureTechnical);
+public sealed record Deployable(string Name, List<string> Units, List<ExtJson>? Ext = null);
+public sealed record ModuleDecl(string Name, bool PureTechnical, List<ExtJson>? Ext = null);
 
-public sealed record ParamJson(string Name, string Type, bool Collection);
+public sealed record ParamJson(string Name, string Type, bool Collection, List<ExtJson>? Ext = null);
 public sealed record SignatureJson(List<ParamJson> Params, string Returns);
 public sealed record ServingArg(string Kind, string Value, List<string>? Params);
 public sealed record ServingJson(string Protocol, List<ServingArg> Args, string Raw);
@@ -54,10 +54,10 @@ public sealed record EntityFieldJson(
     string? TargetModule, bool? CrossModule, SourceOfTruth? SourceOfTruth, List<ExtJson>? Ext = null);
 public sealed record EntityJson(
     string Id, string Module, List<string> Realizes, List<EntityFieldJson> Fields,
-    List<GuardedExpr> Invariants, string? Concurrency);
+    List<GuardedExpr> Invariants, string? Concurrency, List<ExtJson>? Ext = null);
 
-public sealed record FieldJson(string Name, string Type, bool Collection);
-public sealed record TypeJson(string Id, string Module, string Kind, List<FieldJson>? Fields, List<string>? Values);
+public sealed record FieldJson(string Name, string Type, bool Collection, List<ExtJson>? Ext = null);
+public sealed record TypeJson(string Id, string Module, string Kind, List<FieldJson>? Fields, List<string>? Values, List<ExtJson>? Ext = null);
 
 public sealed record ErrorJson(string Id, string Module, string ResultType);
 public sealed record EventJson(string Id, string Module, List<FieldJson> Payload);

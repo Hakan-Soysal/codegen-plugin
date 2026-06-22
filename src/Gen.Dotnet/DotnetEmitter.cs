@@ -376,7 +376,7 @@ public static class DotnetEmitter
         var records = new List<string>();
         for (var i = 0; i < e.Invariants.Count; i++)
         {
-            var (method, rec) = Predicate("Check", i, e.Invariants[i].Ast, e.Invariants[i].Text, opId: null, entityId: e.Id, gm, report);
+            var (method, rec) = Predicate("Invariant", i, e.Invariants[i].Ast, e.Invariants[i].Text, opId: null, entityId: e.Id, gm, report);
             methods.Add(method.Replace("static bool", "public static bool"));
             if (rec is not null) records.Add(rec);
         }

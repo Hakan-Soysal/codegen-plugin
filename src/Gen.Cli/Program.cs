@@ -13,7 +13,10 @@ var gm = GmBuilder.Build(manifest, contract);
 
 var report = new BuildReport();
 DotnetEmitter.Emit(gm, outDir, report);
+Completeness.Check(manifest, report);   // INV-7 gate: census ⊄ report → SilentDrop
 report.WriteTo(Path.Combine(outDir, "build-report.json"));
 
-Console.WriteLine($"emit → {outDir}  (clean={report.Clean}, constructs={report.Entries.Count})");
+var drops = report.SilentDrops;
+Console.WriteLine($"emit → {outDir}  (clean={report.Clean}, constructs={report.Entries.Count}, silentDrops={drops.Count})");
+foreach (var d in drops) Console.WriteLine($"  ⚠ SESSİZ DROP: {d.Construct} / {d.Id}");
 return report.Clean ? 0 : 1;
