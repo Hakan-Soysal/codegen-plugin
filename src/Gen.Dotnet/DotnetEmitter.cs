@@ -359,6 +359,16 @@ public static class DotnetEmitter
             sb.Append($"public sealed class {ext.Name}Client : I{ext.Name}\n{{\n");
             foreach (var b in ext.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{ext.Name}.{b.Id}\");\n");
             sb.Append("}\n\n");
+            // boundary serving (external'ın protokol-maruziyeti; çağıran-tarafı için metadata) + caller-side validation (INV-4).
+            foreach (var b in ext.Operations)
+            {
+                foreach (var s in b.Serving ?? new())
+                {
+                    report.Realized("serving", $"{ext.Name}.{b.Id}:{s.Protocol}");
+                    sb.Append($"// boundary serving: {ext.Name}.{b.Id} via {s.Protocol} (transport = client adapter sorumluluğu).\n");
+                }
+                if (b.Validation is { Count: > 0 }) sb.Append(BoundaryValidation(ext.Name, b, report));
+            }
         }
         foreach (var ce in gm.CallEdges)
         {
@@ -371,6 +381,45 @@ public static class DotnetEmitter
                 sb.Append($"// ponytail: committed-adımları izle; hata → ters-sıra {ce.Compensate.Op} çağır (orchestration-state seam).\n\n");
             }
         }
+        return sb.ToString();
+    }
+
+    // external boundary-op caller-side validation (INV-4): çağırmadan ÖNCE tipli predicate. Tip = boundary param'ları.
+    static string BoundaryValidation(string extName, BoundaryOpJson b, BuildReport report)
+    {
+        var key = $"{extName}.{b.Id}";
+        var methods = new List<string>();
+        var records = new List<string>();
+        for (var i = 0; i < b.Validation!.Count; i++)
+        {
+            var g = b.Validation[i];
+            try
+            {
+                var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(g.Ast);
+                var inputName = $"{extName}{b.Id}Validation{i}Input";
+                var fields = paths.Select(p =>
+                {
+                    var param = b.Signature.Params.FirstOrDefault(x => x.Name == p[0]);
+                    var cs = param is null ? "decimal" : Naming.Type(param.Type, param.Collection);
+                    return $"{cs} {Gen.Core.Predicate.ExprBuild.PropName(p)}";
+                }).ToList();
+                methods.Add($"    public static bool Validation_{i}({inputName} input) => {expr};");
+                records.Add($"public sealed record {inputName}({string.Join(", ", fields)});");
+            }
+            catch (Gen.Core.UnsupportedConstruct e)
+            {
+                report.Unsupported("validation", $"{key}#Validation{i}", e.Message);
+                methods.Add($"    public static bool Validation_{i}() => throw new NotImplementedException(\"unsupported: {Escape(g.Text)}\");");
+            }
+        }
+        report.Realized("validation", key);
+        var sb = new StringBuilder();
+        sb.Append($"// caller-side validation (INV-4): {extName}.{b.Id} çağrılmadan önce doğrulanır.\n");
+        sb.Append($"public static class {extName}{b.Id}Validation\n{{\n");
+        sb.Append(string.Join("\n", methods));
+        sb.Append("\n}\n");
+        foreach (var r in records) sb.Append(r + "\n");
+        sb.Append("\n");
         return sb.ToString();
     }
 

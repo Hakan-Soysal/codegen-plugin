@@ -66,7 +66,7 @@ public sealed record ConsumerRef(string Module, string Op);
 public sealed record SubscriptionJson(EventRef Event, ConsumerRef Consumer);
 public sealed record CallTarget(string System, string Op);
 public sealed record CallEdgeJson(string From, CallTarget To, string Kind, CallTarget? Compensate);
-public sealed record BoundaryOpJson(string Id, SignatureJson Signature);
+public sealed record BoundaryOpJson(string Id, SignatureJson Signature, List<ServingJson>? Serving = null, List<GuardedExpr>? Validation = null);
 public sealed record ExternalJson(string Name, bool Generated, List<BoundaryOpJson> Operations);
 
 // uncharted (T-4.3): external gibi çağrı-adapter (generated:false) AMA kendi entity/type'larını OWN eder.

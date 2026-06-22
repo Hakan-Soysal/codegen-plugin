@@ -114,6 +114,32 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── D2 — external BoundaryOp serving + validation (INV-4) ─────────────
+    [Fact]
+    public void Boundary_op_serving_and_caller_validation_emitted()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var guard = Op(m, "CreateInvoice").Validation[0];   // `amount > 0` (gerçek Ast); charge param'ı = amount
+            var ext = m.Externals[0];
+            var ops = ext.Operations.Select(b => b.Id == "charge"
+                ? b with { Serving = new() { new ServingJson("rest", new(), "rest") }, Validation = new() { guard } }
+                : b).ToList();
+            return m with { Externals = new() { ext with { Operations = ops } } };
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Boundary.g.cs"));
+            Assert.Contains("public static class PaymentGatewaychargeValidation", f);
+            Assert.Contains("(input.Amount > 0)", f);
+            Assert.True(report.Covers("validation", "PaymentGateway.charge"));
+            Assert.True(report.Covers("serving", "PaymentGateway.charge:rest"));
+            NoDrop(report, "validation", "PaymentGateway.charge");
+            NoDrop(report, "serving", "PaymentGateway.charge:rest");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── D1 — serving @grpc/@queue → explicit UnsupportedConstruct ─────────
     [Fact]
     public void Serving_rest_realized_nonrest_unsupported_not_silent()
