@@ -404,7 +404,8 @@ public static class DotnetEmitter
             var g = b.Validation[i];
             try
             {
-                var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(g.Ast);
+                var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(g.Ast,
+                    p => b.Signature.Params.FirstOrDefault(x => x.Name == p[0])?.Type);   // boundary param tipi (Decimal→'m')
                 var inputName = $"{extName}{b.Id}Validation{i}Input";
                 var fields = paths.Select(p =>
                 {
@@ -651,7 +652,8 @@ public static class DotnetEmitter
         }
         try
         {
-            var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(ast);
+            // tip-duyarlı: path → nötr manifest tipi (Decimal literal'leri 'm' suffix'i alır → CS0019 önlenir).
+            var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(ast, p => gm.Env.ResolvePath(gm, p, opId, entityId));
             var inputName = $"{owner}{kind}{i}Input";
             var anyInferred = false;
             var fields = new List<string>();

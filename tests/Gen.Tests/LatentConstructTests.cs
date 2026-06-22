@@ -192,7 +192,7 @@ public class LatentConstructTests
         {
             var f = File.ReadAllText(Path.Combine(dir, "src", "Boundary.g.cs"));
             Assert.Contains("public static class PaymentGatewaychargeValidation", f);
-            Assert.Contains("(input.Amount > 0)", f);
+            Assert.Contains("(input.Amount > 0m)", f);   // amount Decimal → tip-duyarlı 'm' suffix (F2)
             Assert.True(report.Covers("validation", "PaymentGateway.charge"));
             Assert.True(report.Covers("serving", "PaymentGateway.charge:rest"));
             NoDrop(report, "validation", "PaymentGateway.charge");
@@ -238,6 +238,26 @@ public class LatentConstructTests
             Assert.Contains("// for guard: \"credit-policy\"", f);
             Assert.True(report.Covers("guardRef", "CreateInvoice"));
             NoDrop(report, "guardRef", "CreateInvoice");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    // ── F2 — decimal/fractional literal → 'm' suffix (no CS0019) ──────────
+    [Fact]
+    public void Decimal_field_fractional_literal_emits_m_suffix()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var create = Op(m, "CreateInvoice");   // amount: Decimal
+            var val = new GuardedExpr("amount > 0.5",
+                new BinaryNode("cmp", ">", new PathNode(new[] { "amount" }), new LiteralNode("number", 0.5)), null);
+            return WithOp(m, create with { Validation = new() { val } });
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Guards.g.cs"));
+            Assert.Contains("input.Amount > 0.5m", f);          // decimal-safe
+            Assert.DoesNotContain("input.Amount > 0.5)", f);     // ham double (CS0019) DEĞİL
         }
         finally { Directory.Delete(dir, true); }
     }

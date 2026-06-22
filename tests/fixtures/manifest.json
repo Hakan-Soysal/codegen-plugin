@@ -221,7 +221,7 @@
           "operations": [ { "id": "post",
             "signature": { "params": [{ "name": "amount", "type": "Decimal", "collection": false, "ext": [ { "ns": "ucparam", "name": "tag", "args": {} } ] }], "returns": "Bool" },
             "serving": [ { "protocol": "rest", "args": [], "raw": "@rest()" } ],
-            "validation": [ { "text": "amount > 0", "ast": { "node": "cmp", "op": ">", "left": { "path": ["amount"] }, "right": { "kind": "number", "value": 0 } } } ]
+            "validation": [ { "text": "amount > 0.5", "ast": { "node": "cmp", "op": ">", "left": { "path": ["amount"] }, "right": { "kind": "number", "value": 0.5 } } } ]
           } ],
           "entities": [ { "id": "LedgerEntry", "realizes": [], "fields": [ { "name": "id", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" } ], "concurrency": null } ],
           "types": [ { "id": "LedgerKind", "kind": "enum", "values": ["Debit", "Credit"] } ]
