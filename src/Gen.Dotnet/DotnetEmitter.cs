@@ -75,7 +75,13 @@ public static class DotnetEmitter
                 var auth = AuthFile(module.Name, op, report);
                 if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
                 foreach (var ev in op.Op.Emits) report.Realized("emits", $"{op.Id}->{ev}");
-                if (op.Op.Pagination is not null) { report.Realized("pagination", op.Id); report.Policy("cursor-token", "opaque (generator-policy)"); }
+                if (op.Op.Pagination is { } pg)
+                {
+                    report.Realized("pagination", op.Id);
+                    report.Policy("pagination-strategy", $"{pg.Strategy} (generator-policy)");
+                    report.Policy("cursor-token", "opaque (generator-policy)");
+                    WriteAlways(Path.Combine(dir, $"{op.Id}.Page.g.cs"), PagePartial(module.Name, op, pg));
+                }
                 if (op.Op.Idempotent is not null)
                 {
                     WriteAlways(Path.Combine(dir, $"{op.Id}.Idem.g.cs"), IdemPartial(module.Name, op));
@@ -795,7 +801,24 @@ public static class DotnetEmitter
 
     static string RequestName(GmOperation op) => op.IsCommand ? $"{op.Id}Command" : $"{op.Id}Query";
 
-    // pagination → dönüş Page<T>; istek param'larına opak cursor + size eklenir (cursor kodlaması = §8 policy).
+    // pagination strategy + declared size → handler sabitleri (offset/cursor seçimi + default sayfa boyutu artefakta ulaşır).
+    static string PagePartial(string module, GmOperation op, Pagination pg)
+    {
+        var sizeConst = pg.Size is { } sz ? $"\n    public const int DefaultPageSize = {sz};" : "";
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // pagination: strategy + declared size (keyset/offset uygulaması + cursor-token = §8 policy).
+            public partial class {{op.Id}}Handler
+            {
+                public const string PaginationStrategy = "{{Escape(pg.Strategy)}}";{{sizeConst}}
+            }
+
+            """;
+    }
+
+    // pagination → dönüş Page<T>; istek param'larına opak cursor/offset + size eklenir (kodlama = §8 policy).
     static string ReturnType(GmOperation op)
     {
         var ret = Naming.Type(op.Op.Signature.Returns, false);
@@ -805,7 +828,11 @@ public static class DotnetEmitter
     static string RequestFields(GmOperation op)
     {
         var fields = op.Op.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {Naming.Pascal(p.Name)}").ToList();
-        if (op.Op.Pagination is not null) { fields.Add("string? Cursor"); fields.Add("int Size"); }
+        if (op.Op.Pagination is { } pg)   // strategy'ye göre cursor (opaque) vs offset (numeric)
+        {
+            fields.Add(pg.Strategy == "offset" ? "int? Offset" : "string? Cursor");
+            fields.Add("int Size");
+        }
         return string.Join(", ", fields);
     }
 
@@ -814,7 +841,7 @@ public static class DotnetEmitter
         var req = RequestName(op);
         var ret = ReturnType(op);
         var pageComment = op.Op.Pagination is { } p
-            ? $"\n// pagination keyset: ORDER BY {string.Join(", ", p.Keys.Select(k => $"{Naming.Pascal(k.Field)} {k.Direction}"))} (keyset/offset + cursor-token = generator-policy)"
+            ? $"\n// pagination: {p.Strategy} (size={(p.Size?.ToString() ?? "—")}) ORDER BY {string.Join(", ", p.Keys.Select(k => $"{Naming.Pascal(k.Field)} {k.Direction}"))} (keyset/offset + cursor-token = generator-policy)"
             : "";
         // param ext → request alanı başına yorum + census kaydı (realizasyon = §8 policy).
         var paramExt = string.Concat(op.Op.Signature.Params.Select(p =>
@@ -914,10 +941,11 @@ public static class DotnetEmitter
         var routeParams = routeArg?.Params ?? new();
         var lambdaList = routeParams.Select(p => $"string {p}").ToList();
         var ctorArgs = routeParams.ToList();
-        if (op.Op.Pagination is not null)   // paginated GET → cursor/size query-string'den
+        if (op.Op.Pagination is { } pg)   // paginated GET → strategy'ye göre cursor/offset + size query-string'den
         {
-            lambdaList.Add("string? cursor"); lambdaList.Add("int size");
-            ctorArgs.Add("cursor"); ctorArgs.Add("size");
+            if (pg.Strategy == "offset") { lambdaList.Add("int? offset"); ctorArgs.Add("offset"); }
+            else { lambdaList.Add("string? cursor"); ctorArgs.Add("cursor"); }
+            lambdaList.Add("int size"); ctorArgs.Add("size");
         }
         var lambdaParams = lambdaList.Count > 0 ? string.Join(", ", lambdaList) + ", " : "";
         var ctor = $"new {req}({string.Join(", ", ctorArgs)})";

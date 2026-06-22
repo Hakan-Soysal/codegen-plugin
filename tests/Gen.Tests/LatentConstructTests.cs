@@ -242,6 +242,27 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── F3 — pagination strategy + size fidelity (offset ≠ cursor) ────────
+    [Fact]
+    public void Pagination_offset_strategy_and_size_reach_artifact()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var li = Op(m, "ListInvoices");
+            return WithOp(m, li with { Pagination = li.Pagination! with { Strategy = "offset", Size = 50 } });
+        });
+        try
+        {
+            var op = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.g.cs"));
+            Assert.Contains("int? Offset", op);                 // offset-shaped, NOT cursor
+            Assert.DoesNotContain("string? Cursor", op);
+            var page = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.Page.g.cs"));
+            Assert.Contains("PaginationStrategy = \"offset\"", page);
+            Assert.Contains("DefaultPageSize = 50", page);       // declared size reaches output
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── F2 — decimal/fractional literal → 'm' suffix (no CS0019) ──────────
     [Fact]
     public void Decimal_field_fractional_literal_emits_m_suffix()
