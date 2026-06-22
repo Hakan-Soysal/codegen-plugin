@@ -1,0 +1,26 @@
+{
+    "meta": { "schemaVersion": 2 },
+    "operations": [
+        {
+            "id": "biz.CreateInvoice",
+            "kind": "command",
+            "signature": { "actor": "Clerk", "verb": "create", "ownership": "any", "resource": "Invoice" },
+            "delegation": null,
+            "description": "Bir müşteri için yeni fatura oluşturur.",
+            "schedule": null,
+            "guards": [],
+            "effects": [{ "kind": "create", "target": "biz.Invoice" }],
+            "access": { "writes": ["biz.Invoice"], "reads": [] },
+            "flows": [],
+            "processes": [],
+            "domain": "Billing"
+        }
+    ],
+    "entities": [
+        { "id": "biz.Invoice", "name": "Invoice", "domain": "Billing" }
+    ],
+    "actors": [
+        { "id": "Clerk", "extends": null }
+    ],
+    "relations": []
+}

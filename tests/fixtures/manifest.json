@@ -1,0 +1,143 @@
+{
+    "mode": "linked",
+    "contract": "./operations.json",
+    "meta": { "hasErrors": false, "errorCount": 0 },
+    "deployables": [
+        { "name": "BillingService", "units": ["Billing"] }
+    ],
+    "modules": [
+        { "name": "Billing", "pureTechnical": false }
+    ],
+    "operations": [
+        {
+            "id": "CreateInvoice",
+            "module": "Billing",
+            "visibility": "exposed",
+            "realizes": "biz.CreateInvoice",
+            "signature": {
+                "params": [
+                    { "name": "customerId", "type": "ID", "collection": false },
+                    { "name": "amount", "type": "Money", "collection": false }
+                ],
+                "returns": "Invoice"
+            },
+            "serving": [
+                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "POST" }, { "kind": "string", "value": "/invoices" }], "raw": "@rest POST '/invoices'" }
+            ],
+            "roles": ["Clerk"],
+            "ownership": null,
+            "access": { "reads": [], "creates": ["Invoice"], "updates": [], "deletes": [] },
+            "validation": [
+                { "text": "amount > 0", "ast": { "node": "cmp", "op": ">", "left": { "path": ["amount"] }, "right": { "kind": "number", "value": 0 } } }
+            ],
+            "rule": [
+                { "text": "amount <= creditLimit", "ast": { "node": "cmp", "op": "<=", "left": { "path": ["amount"] }, "right": { "path": ["resource", "creditLimit"] } } }
+            ],
+            "note": "Müşteri kredi limiti dış servisten gelir.",
+            "businessNote": null,
+            "edges": [],
+            "consistency": { "risk": "strong", "mode": null },
+            "abac": null,
+            "scopes": [],
+            "throws": ["DuplicateInvoice"],
+            "idempotent": null,
+            "emits": ["InvoiceCreated"],
+            "pagination": null
+        },
+        {
+            "id": "GetInvoice",
+            "module": "Billing",
+            "visibility": "exposed",
+            "realizes": null,
+            "signature": {
+                "params": [{ "name": "id", "type": "ID", "collection": false }],
+                "returns": "Invoice"
+            },
+            "serving": [
+                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "GET" }, { "kind": "string", "value": "/invoices/{id}", "params": ["id"] }], "raw": "@rest GET '/invoices/{id}'" }
+            ],
+            "roles": ["Clerk"],
+            "ownership": null,
+            "access": { "reads": ["Invoice"], "creates": [], "updates": [], "deletes": [] },
+            "validation": [],
+            "rule": [],
+            "note": null,
+            "businessNote": null,
+            "edges": [],
+            "consistency": { "risk": "strong", "mode": null },
+            "abac": null,
+            "scopes": [],
+            "throws": [],
+            "idempotent": null,
+            "emits": [],
+            "pagination": null
+        },
+        {
+            "id": "ListInvoices",
+            "module": "Billing",
+            "visibility": "exposed",
+            "realizes": null,
+            "signature": {
+                "params": [],
+                "returns": "Invoice"
+            },
+            "serving": [
+                { "protocol": "rest", "args": [{ "kind": "keyword", "value": "GET" }, { "kind": "string", "value": "/invoices" }], "raw": "@rest GET '/invoices'" }
+            ],
+            "roles": ["Clerk"],
+            "ownership": null,
+            "access": { "reads": ["Invoice"], "creates": [], "updates": [], "deletes": [] },
+            "validation": [],
+            "rule": [],
+            "note": null,
+            "businessNote": null,
+            "edges": [],
+            "consistency": { "risk": "strong", "mode": null },
+            "abac": null,
+            "scopes": [],
+            "throws": [],
+            "idempotent": null,
+            "emits": [],
+            "pagination": { "strategy": "cursor", "keys": [{ "field": "createdAt", "direction": "desc" }], "size": 20 }
+        }
+    ],
+    "entities": [
+        {
+            "id": "Invoice",
+            "module": "Billing",
+            "realizes": ["biz.Invoice"],
+            "fields": [
+                { "name": "id", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
+                { "name": "customerId", "type": "ID", "collection": false, "cardinality": "one", "ref": "scalar" },
+                { "name": "amount", "type": "Money", "collection": false, "cardinality": "one", "ref": "type" },
+                { "name": "status", "type": "InvoiceStatus", "collection": false, "cardinality": "one", "ref": "enum" },
+                { "name": "createdAt", "type": "DateTime", "collection": false, "cardinality": "one", "ref": "scalar" }
+            ],
+            "invariants": [
+                { "text": "amount >= 0", "ast": { "node": "cmp", "op": ">=", "left": { "path": ["amount"] }, "right": { "kind": "number", "value": 0 } } }
+            ],
+            "concurrency": "optimistic"
+        }
+    ],
+    "types": [
+        { "id": "Money", "module": "Billing", "kind": "composite", "fields": [
+            { "name": "amount", "type": "Decimal", "collection": false },
+            { "name": "currency", "type": "String", "collection": false }
+        ] },
+        { "id": "InvoiceStatus", "module": "Billing", "kind": "enum", "values": ["Draft", "Issued", "Paid"] }
+    ],
+    "errors": [
+        { "id": "DuplicateInvoice", "module": "Billing", "resultType": "NotProcessable" }
+    ],
+    "events": [
+        { "id": "InvoiceCreated", "module": "Billing", "payload": [
+            { "name": "invoiceId", "type": "ID", "collection": false },
+            { "name": "amount", "type": "Money", "collection": false }
+        ] }
+    ],
+    "subscriptions": [],
+    "externals": [],
+    "uncharted": [],
+    "callEdges": [],
+    "coverage": { "unrealizedBusinessOps": [], "uncoveredEntities": [] }
+}

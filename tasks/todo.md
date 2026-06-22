@@ -3,7 +3,7 @@
 Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet build`/golden/build-report doğrula, sonra commit.
 
 ## Phase 1 — Foundation
-- [ ] Task 1 · Solution + manifest fixture (S)
+- [x] Task 1 · Solution + manifest fixture (S)
 - [ ] Task 2 · POCO'lar + ExprNode polimorfik converter (M)
 - [ ] Task 3 · Load + realizes-join + GM (operations) (M)
 - [ ] Task 4 · build-report iskeleti (S)
