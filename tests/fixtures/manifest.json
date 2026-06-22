@@ -57,7 +57,10 @@
             "visibility": "exposed",
             "realizes": null,
             "signature": {
-                "params": [{ "name": "id", "type": "ID", "collection": false }],
+                "params": [
+                    { "name": "id", "type": "ID", "collection": false },
+                    { "name": "includeVoid", "type": "Bool", "collection": false }
+                ],
                 "returns": "Invoice"
             },
             "serving": [

@@ -937,10 +937,10 @@ public static class DotnetEmitter
         if (Naming.BindsBody(method))
             return $"app.{verb}(\"{route}\", async ({req} body, {op.Id}Handler handler, CancellationToken ct) => ResultHttp.ToHttp(await handler.ExecuteAsync(body, ct)));\n";
 
-        // route param'larından request kur (ad eşleşmesi route token = signature param).
-        var routeParams = routeArg?.Params ?? new();
-        var lambdaList = routeParams.Select(p => $"string {p}").ToList();
-        var ctorArgs = routeParams.ToList();
+        // TÜM signature param'ları lambda'ya gir (ad eşleşmesi: route token'lar route'tan, kalanlar query'den bind olur).
+        // Yalnız route param'larını almak non-route GET param'ında ctor arity hatası (CS7036) üretiyordu.
+        var lambdaList = op.Op.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {p.Name}").ToList();
+        var ctorArgs = op.Op.Signature.Params.Select(p => p.Name).ToList();
         if (op.Op.Pagination is { } pg)   // paginated GET → strategy'ye göre cursor/offset + size query-string'den
         {
             if (pg.Strategy == "offset") { lambdaList.Add("int? offset"); ctorArgs.Add("offset"); }

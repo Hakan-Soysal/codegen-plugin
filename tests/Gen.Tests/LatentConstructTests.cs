@@ -242,6 +242,22 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── F4 — GET route-token olmayan param binding (CS7036 fix) ───────────
+    [Fact]
+    public void Get_with_non_route_query_param_binds_all_params()
+    {
+        var (report, dir, _) = EmitMut(m => m);   // fixture GetInvoice: route /invoices/{id} + non-route query param includeVoid
+        try
+        {
+            var prog = File.ReadAllText(Path.Combine(dir, "Program.cs"));
+            // lambda hem route token'ı hem non-route query param'ı içermeli (ctor arity tam)
+            Assert.Contains("string id", prog);
+            Assert.Contains("bool includeVoid", prog);
+            Assert.Contains("new GetInvoiceQuery(id, includeVoid)", prog);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── F3 — pagination strategy + size fidelity (offset ≠ cursor) ────────
     [Fact]
     public void Pagination_offset_strategy_and_size_reach_artifact()
