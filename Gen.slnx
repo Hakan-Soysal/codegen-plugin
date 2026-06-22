@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Gen.Cli/Gen.Cli.csproj" />
     <Project Path="src/Gen.Core/Gen.Core.csproj" />
     <Project Path="src/Gen.Dotnet/Gen.Dotnet.csproj" />
   </Folder>
