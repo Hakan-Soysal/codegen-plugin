@@ -25,6 +25,7 @@ public static class DotnetEmitter
 
         foreach (var t in gm.Types) report.Realized(t.Kind, t.Id);
         foreach (var e in gm.Entities) report.Realized("entity", e.Id);
+        if (gm.Entities.Count > 0) WriteAlways(Path.Combine(src, "AppDbContext.g.cs"), DbContextFile(gm));
 
         foreach (var module in gm.Modules)
         {
@@ -67,6 +68,10 @@ public static class DotnetEmitter
             <Nullable>enable</Nullable>
             <ImplicitUsings>enable</ImplicitUsings>
           </PropertyGroup>
+          <ItemGroup>
+            <!-- ponytail: pin; gerekince bump -->
+            <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+          </ItemGroup>
         </Project>
 
         """;
@@ -126,17 +131,41 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
-    // ponytail: entity şimdilik düz record; Task 9 EF entity'ye (RowVersion/ilişki) yükseltir.
+    // entity → EF entity class. concurrency optimistic → [Timestamp] RowVersion.
     static string EntitiesFile(string module, List<EntityJson> entities)
     {
         var sb = new StringBuilder();
+        sb.Append("using System.ComponentModel.DataAnnotations;\n\n");
         sb.Append($"namespace {Root}.{module};\n\n");
         foreach (var e in entities)
         {
-            var props = string.Join(", ", e.Fields.Select(f => $"{Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)}"));
-            sb.Append($"public sealed record {e.Id}({props});\n\n");
+            sb.Append($"public class {e.Id}\n{{\n");
+            foreach (var f in e.Fields)
+                sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
+            if (e.Concurrency == "optimistic")
+                sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
+            sb.Append("}\n\n");
         }
         return sb.ToString();
+    }
+
+    // tek AppDbContext + entity başına DbSet. Provider Program.cs'te seam.
+    static string DbContextFile(GenerationModel gm)
+    {
+        var sets = new StringBuilder();
+        foreach (var e in gm.Entities)
+            sets.Append($"    public DbSet<{Root}.{e.Module}.{e.Id}> {e.Id}s => Set<{Root}.{e.Module}.{e.Id}>();\n");
+        return
+            $$"""
+            using Microsoft.EntityFrameworkCore;
+
+            namespace {{Root}};
+
+            public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+            {
+            {{sets}}}
+
+            """;
     }
 
     // ── guard/invariant predicate'leri (Task 8, INV-4) ───────────────────
@@ -262,9 +291,12 @@ public static class DotnetEmitter
     static string Program(GenerationModel gm)
     {
         var usings = new StringBuilder($"using {Root};\n");
+        usings.Append("using Microsoft.EntityFrameworkCore;\n");
         foreach (var m in gm.Modules) usings.Append($"using {Root}.{m.Name};\n");
 
         var di = new StringBuilder();
+        if (gm.Entities.Count > 0)
+            di.Append("builder.Services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
         var maps = new StringBuilder();
         foreach (var op in gm.Operations)
         {

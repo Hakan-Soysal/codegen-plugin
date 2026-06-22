@@ -20,8 +20,8 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [x] Task 8 · validation/rule/permit/invariant → predicate gövdesi (S)
 
 ## Phase 4 — .NET core constructs
-- [ ] Task 9 · entity/field/sourceOfTruth/concurrency → EF entity (M)
-- [ ] Task 10 · type/enum → record/enum (S)
+- [x] Task 9 · entity/field/sourceOfTruth/concurrency → EF entity (M)
+- [x] Task 10 · type/enum → record/enum (S)
 - [ ] Task 11 · event/emits/on → record + pub/sub stub + outbox (M)
 - [ ] Task 12 · auth (roles/ownership/scopes) → guard iskeleti (S)
 - [ ] ▸ Checkpoint: .NET core (Go spike'a hazır)

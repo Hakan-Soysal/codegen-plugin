@@ -69,6 +69,22 @@ public class EmitTests
     }
 
     [Fact]
+    public void Entity_emits_ef_class_with_rowversion_and_dbcontext()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
+            var ent = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs"));
+            Assert.Contains("public class Invoice", ent);
+            Assert.Contains("[Timestamp] public byte[] RowVersion", ent);   // concurrency optimistic
+            var ctx = File.ReadAllText(Path.Combine(dir, "src", "AppDbContext.g.cs"));
+            Assert.Contains("public DbSet<App.Billing.Invoice> Invoices", ctx);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();
