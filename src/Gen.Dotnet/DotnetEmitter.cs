@@ -74,6 +74,8 @@ public static class DotnetEmitter
                 if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
                 var throws = ThrowsPartial(module.Name, op, gm, report);
                 if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
+                var consistency = ConsistencyPartial(module.Name, op, report);
+                if (consistency is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Consistency.g.cs"), consistency);
                 report.Realized("operation", op.Id);
             }
         }
@@ -243,6 +245,33 @@ public static class DotnetEmitter
         "ServerError" => $"    public static Result<{ret}> {name}(string message) => new ServerError<{ret}>(message);",
         _ => $"    public static Result<{ret}> {name}(string message) => new NotProcessable<{ret}>({codeRef}, message);"
     };
+
+    // consistency {risk, mode}: eventual → outbox seçim-iskeleti; strong+mode → in-proc tx (mode yorumlu).
+    // Census ile aynı koşul: yalnız mode!=null VEYA risk==eventual (sade strong/no-mode = örtük ambient tx, artefakt yok).
+    static string? ConsistencyPartial(string module, GmOperation op, BuildReport report)
+    {
+        var c = op.Op.Consistency;
+        if (c is null || (c.Mode is null && c.Risk != "eventual")) return null;
+        report.Realized("consistency", op.Id);
+        var mode = c.Mode ?? "default";
+        report.Policy("consistency-mode", $"{c.Risk}/{mode} (generator-policy)");
+        var modeConst = c.Mode is null ? "null" : $"\"{Escape(c.Mode)}\"";
+        var strategy = c.Risk == "eventual"
+            ? "outbox seçim-iskeleti: write + outbox-kaydı TEK tx; ayrı dispatcher publish eder. Taşıma/retry = §8 policy."
+            : "in-proc transaction (strong): SaveChanges ambient tx içinde. mode = ek garanti yorumu.";
+        return
+            $$"""
+            namespace {{Root}}.{{module}};
+
+            // consistency: {{c.Risk}} (mode: {{mode}}) → {{strategy}}
+            public partial class {{op.Id}}Handler
+            {
+                public const string ConsistencyRisk = "{{Escape(c.Risk)}}";
+                public const string? ConsistencyMode = {{modeConst}};
+            }
+
+            """;
+    }
 
     // ── boundary (external/uncharted çağrı-adapter) + saga (calls+compensate) ──
     static string BoundaryFile(GenerationModel gm, BuildReport report)
