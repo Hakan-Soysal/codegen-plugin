@@ -624,7 +624,7 @@ public static class DotnetEmitter
         }
         for (var i = 0; i < op.Op.Validation.Count; i++) Add("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text, op.Op.Validation[i].GuardRef);
         for (var i = 0; i < op.Op.Rule.Count; i++) Add("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text, op.Op.Rule[i].GuardRef);
-        if (op.Op.Abac is not null) Add("Permit", 0, op.Op.Abac.Permit, op.Op.Abac.Permit.ToString() ?? "permit");
+        if (op.Op.Abac is not null) Add("Permit", 0, op.Op.Abac.Permit, "permit when <expr>");   // abac.permit'in text alanı yok; temiz placeholder (ToString dump değil)
         if (methods.Count == 0) return null;
 
         return

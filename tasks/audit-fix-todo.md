@@ -7,6 +7,6 @@
 - [x] F3 · `paginated by` strategy + size fidelity (offset≠cursor, size default) (🟠)
 - [x] F4 · GET route-token olmayan param binding (🟠 CS7036)
 - [x] F5 · Gate `Covers` substring → sınır-duyarlı eşleşme (🟡 soundness)
-- [ ] F6 · Manifest-layer N/A belgeleme (@internal, ext@external/uncharted/error/event) + minör (permit comment) (🟡/⚪)
+- [x] F6 · Manifest-layer N/A belgeleme (@internal, ext@external/uncharted/error/event) + minör (permit comment) (🟡/⚪)
 
 Not: @internal ve ext@external/error/event'in GERÇEK fix'i CommandDSL/manifest.ts'te (working-dir dışı, local-only kuralı → kullanıcı onayı gerekir). Bu repo'da yalnız belgeleme + savunma.

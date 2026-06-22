@@ -17,6 +17,9 @@ public static class Completeness
         // extension-decl/realizes (join), access (→ IsCommand + DbSet türevi), pureTechnical (rolemap türevi).
         // N/A (manifest KATMANINDA düşer → adaptör girdisinde YOK): returnAnnotations (manifest yalnız returns.name
         // emit eder), emits-target ConsumerOpRef (Emits = string[]; hedef manifest'te taşınmaz). Adaptör bunları göremez.
+        // N/A (upstream manifest.ts; .NET adaptörü dışı — düzeltme CommandDSL'de): @internal token (manifest.ts
+        // visibility'yi serving-varlığından TÜRETİR, token'ı okumaz), external/uncharted/error/event ÜSTÜ @ns.name
+        // (manifest.ts extProps emit etmez + bu site'lar ExtSite enum'unda yok → geçerli annotation hedefi değil).
         foreach (var d in m.Deployables) { x.Add(("deployable", d.Name)); AddExt(x, d.Ext, d.Name); }
         foreach (var mod in m.Modules) { x.Add(("module", mod.Name)); AddExt(x, mod.Ext, mod.Name); }
         foreach (var e in m.Errors) x.Add(("error", e.Id));
