@@ -35,6 +35,11 @@ public static class DotnetEmitter
             WriteAlways(Path.Combine(src, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
         if (gm.Externals.Count > 0 || gm.CallEdges.Count > 0)
             WriteAlways(Path.Combine(src, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
+        if (gm.Uncharted.Count > 0)
+        {
+            Directory.CreateDirectory(Path.Combine(src, "Uncharted"));
+            foreach (var u in gm.Uncharted) WriteAlways(Path.Combine(src, "Uncharted", $"{u.Name}.g.cs"), UnchartedFile(u, report));   // C2
+        }
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
             WriteAlways(Path.Combine(src, "Idempotency.g.cs"), IdempotencyStore());       // Task 19
 
@@ -351,6 +356,52 @@ public static class DotnetEmitter
                 sb.Append($"// ponytail: committed-adımları izle; hata → ters-sıra {ce.Compensate.Op} çağır (orchestration-state seam).\n\n");
             }
         }
+        return sb.ToString();
+    }
+
+    // uncharted → çağrı-adapter STUB (external emsali) + OWNED entity/type POCO'ları (kendi namespace'inde).
+    static string UnchartedFile(UnchartedJson u, BuildReport report)
+    {
+        report.Realized("uncharted", u.Name);
+        report.Policy("uncharted-realization", "call-adapter stub + owned POCOs (generator-policy)");
+        var sb = new StringBuilder("using System.ComponentModel.DataAnnotations;\n\n");
+        sb.Append($"namespace {Root}.Uncharted.{u.Name};\n\n");
+        sb.Append($"// uncharted '{u.Name}' (generated:false): çağrı-adapter STUB + OWNED model (entity/type korunur).\n");
+        if (u.Deployable is not null) sb.Append($"// deployable: {u.Deployable}\n");
+        sb.Append("\n");
+        foreach (var t in u.Types)
+        {
+            sb.Append(ExtComment(t.Ext, $"{u.Name}.{t.Id}", report));
+            foreach (var f in t.Fields ?? new()) sb.Append(ExtComment(f.Ext, $"{u.Name}.{t.Id}.{f.Name}", report));
+            if (t.Kind == "enum")
+                sb.Append($"public enum {t.Id} {{ {string.Join(", ", t.Values ?? new())} }}\n\n");
+            else
+                sb.Append($"public sealed record {t.Id}({string.Join(", ", (t.Fields ?? new()).Select(f => $"{Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)}"))});\n\n");
+        }
+        foreach (var e in u.Entities)
+        {
+            sb.Append(ExtComment(e.Ext, $"{u.Name}.{e.Id}", report));
+            sb.Append($"public class {e.Id}\n{{\n");
+            foreach (var f in e.Fields)
+            {
+                sb.Append(ExtComment(f.Ext, $"{u.Name}.{e.Id}.{f.Name}", report, "    "));
+                sb.Append($"    public {Naming.Type(f.Type, f.Collection)} {Naming.Pascal(f.Name)} {{ get; set; }} = default!;\n");
+            }
+            if (e.Concurrency == "optimistic") sb.Append("    [Timestamp] public byte[] RowVersion { get; set; } = default!;\n");
+            sb.Append("}\n\n");
+        }
+        string Sig(BoundaryOpJson b)
+        {
+            var ps = string.Join(", ", b.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {p.Name}"));
+            var comma = b.Signature.Params.Count > 0 ? ", " : "";
+            return $"Task<{Naming.Type(b.Signature.Returns, false)}> {Naming.Pascal(b.Id)}({ps}{comma}CancellationToken ct = default)";
+        }
+        sb.Append($"public interface I{u.Name}\n{{\n");
+        foreach (var b in u.Operations) sb.Append($"    {Sig(b)};\n");
+        sb.Append("}\n\n");
+        sb.Append($"public sealed class {u.Name}Client : I{u.Name}\n{{\n");
+        foreach (var b in u.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{u.Name}.{b.Id}\");\n");
+        sb.Append("}\n");
         return sb.ToString();
     }
 
@@ -678,6 +729,8 @@ public static class DotnetEmitter
             di.Append("builder.Services.AddScoped<IEventBus, OutboxEventBus>();\n");
         foreach (var ext in gm.Externals)
             di.Append($"builder.Services.AddSingleton<I{ext.Name}, {ext.Name}Client>();\n");
+        foreach (var u in gm.Uncharted)
+            di.Append($"builder.Services.AddSingleton<{Root}.Uncharted.{u.Name}.I{u.Name}, {Root}.Uncharted.{u.Name}.{u.Name}Client>();\n");
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
             di.Append("builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();\n");
         var maps = new StringBuilder();

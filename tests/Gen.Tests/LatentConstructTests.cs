@@ -114,6 +114,35 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── C2 — uncharted typed model + call-adapter ─────────────────────────
+    [Fact]
+    public void Uncharted_emits_call_adapter_and_owned_model()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var entity = new UnchartedEntity("Account", new(),
+                new() { new EntityFieldJson("id", "String", false, "one", "", null, null, null) }, null);
+            var type = new UnchartedType("Ledger", "composite",
+                new() { new FieldJson("balance", "Decimal", false) }, null);
+            var op = new BoundaryOpJson("Post",
+                new SignatureJson(new() { new ParamJson("amount", "Decimal", false) }, "Decimal"));
+            var u = new UnchartedJson("PaymentLedger", false, "BillingService",
+                new() { op }, new() { entity }, new() { type });
+            return m with { Uncharted = new() { u } };
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Uncharted", "PaymentLedger.g.cs"));
+            Assert.Contains("public interface IPaymentLedger", f);
+            Assert.Contains("public class Account", f);                        // owned entity
+            Assert.Contains("public sealed record Ledger(decimal Balance);", f); // owned type
+            Assert.Contains("NotImplementedException(\"PaymentLedger.Post\")", f); // call-adapter stub
+            Assert.True(report.Covers("uncharted", "PaymentLedger"));
+            NoDrop(report, "uncharted", "PaymentLedger");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── B4 — note → doc-comment ───────────────────────────────────────────
     [Fact]
     public void Note_emits_xml_doc_comment_on_handler()

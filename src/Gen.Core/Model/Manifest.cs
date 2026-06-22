@@ -18,7 +18,7 @@ public sealed record ManifestJson(
     List<EventJson> Events,
     List<SubscriptionJson> Subscriptions,
     List<ExternalJson> Externals,
-    List<JsonElement> Uncharted,   // ponytail: uncharted external'a benzer; minimal report (entity/type-kapsayıcı sonra)
+    List<UnchartedJson> Uncharted,   // uncharted = external-benzeri çağrı-adapter AMA kendi entity/type'larını OWN eder
     List<CallEdgeJson> CallEdges,
     Coverage Coverage);
 
@@ -68,4 +68,11 @@ public sealed record CallTarget(string System, string Op);
 public sealed record CallEdgeJson(string From, CallTarget To, string Kind, CallTarget? Compensate);
 public sealed record BoundaryOpJson(string Id, SignatureJson Signature);
 public sealed record ExternalJson(string Name, bool Generated, List<BoundaryOpJson> Operations);
+
+// uncharted (T-4.3): external gibi çağrı-adapter (generated:false) AMA kendi entity/type'larını OWN eder.
+public sealed record UnchartedEntity(string Id, List<string> Realizes, List<EntityFieldJson> Fields, string? Concurrency, List<ExtJson>? Ext = null);
+public sealed record UnchartedType(string Id, string Kind, List<FieldJson>? Fields, List<string>? Values, List<ExtJson>? Ext = null);
+public sealed record UnchartedJson(
+    string Name, bool Generated, string? Deployable,
+    List<BoundaryOpJson> Operations, List<UnchartedEntity> Entities, List<UnchartedType> Types);
 public sealed record Coverage(List<string> UnrealizedBusinessOps, List<string> UncoveredEntities);

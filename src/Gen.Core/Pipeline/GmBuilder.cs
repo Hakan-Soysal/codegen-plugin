@@ -51,7 +51,7 @@ public static class GmBuilder
                 .OrderBy(x => x.From, StringComparer.Ordinal).ThenBy(x => x.To.System, StringComparer.Ordinal)
                 .ThenBy(x => x.To.Op, StringComparer.Ordinal).ToList(),
             Deployables: m.Deployables.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
-            Uncharted: m.Uncharted,
+            Uncharted: m.Uncharted.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
             Env: env);
     }
 

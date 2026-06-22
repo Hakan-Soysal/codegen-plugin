@@ -17,7 +17,7 @@ public static class Completeness
         foreach (var mod in m.Modules) AddExt(x, mod.Ext, mod.Name);
         foreach (var e in m.Errors) x.Add(("error", e.Id));
         foreach (var ext in m.Externals) { x.Add(("external", ext.Name)); foreach (var b in ext.Operations) x.Add(("boundary-op", $"{ext.Name}.{b.Id}")); }
-        for (var i = 0; i < m.Uncharted.Count; i++) x.Add(("uncharted", $"#{i}"));
+        foreach (var u in m.Uncharted) x.Add(("uncharted", u.Name));
         foreach (var s in m.Subscriptions) x.Add(("subscription", s.Event.Name));
         foreach (var ce in m.CallEdges) { x.Add(("calls", ce.From)); if (ce.Compensate is not null) x.Add(("compensate", ce.From)); }
         foreach (var ev in m.Events) x.Add(("event", ev.Id));
