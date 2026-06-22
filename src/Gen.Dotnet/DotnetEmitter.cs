@@ -502,14 +502,14 @@ public static class DotnetEmitter
     {
         var methods = new List<string>();
         var records = new List<string>();
-        void Add(string kind, int i, Gen.Core.Model.ExprNode ast, string text)
+        void Add(string kind, int i, Gen.Core.Model.ExprNode ast, string text, string? guardRef = null)
         {
-            var (method, rec) = Predicate(kind, i, ast, text, op.Id, entityId: null, gm, report);
+            var (method, rec) = Predicate(kind, i, ast, text, op.Id, entityId: null, gm, report, guardRef);
             methods.Add(method);
             if (rec is not null) records.Add(rec);
         }
-        for (var i = 0; i < op.Op.Validation.Count; i++) Add("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text);
-        for (var i = 0; i < op.Op.Rule.Count; i++) Add("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text);
+        for (var i = 0; i < op.Op.Validation.Count; i++) Add("Validation", i, op.Op.Validation[i].Ast, op.Op.Validation[i].Text, op.Op.Validation[i].GuardRef);
+        for (var i = 0; i < op.Op.Rule.Count; i++) Add("Rule", i, op.Op.Rule[i].Ast, op.Op.Rule[i].Text, op.Op.Rule[i].GuardRef);
         if (op.Op.Abac is not null) Add("Permit", 0, op.Op.Abac.Permit, op.Op.Abac.Permit.ToString() ?? "permit");
         if (methods.Count == 0) return null;
 
@@ -530,10 +530,18 @@ public static class DotnetEmitter
 
     static (string Method, string? Record) Predicate(
         string kind, int i, Gen.Core.Model.ExprNode ast, string text,
-        string? opId, string? entityId, GenerationModel gm, BuildReport report)
+        string? opId, string? entityId, GenerationModel gm, BuildReport report, string? guardRef = null)
     {
         var owner = opId ?? entityId!;
         var key = $"{owner}#{kind}{i}";
+        // for guard "id" → predicate'e yorum (build-time kapsama bağı; navigasyon/runtime bağı AÇILMAZ). Resolved Q1.
+        var guardComment = "";
+        if (guardRef is not null)
+        {
+            report.Realized("guardRef", key);
+            report.Policy("guard-linkage", "build-time coverage link; emitted as comment (generator-policy)");
+            guardComment = $"    // for guard: \"{Escape(guardRef)}\" (build-time kapsama bağı)\n";
+        }
         try
         {
             var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(ast);
@@ -548,12 +556,12 @@ public static class DotnetEmitter
             }
             report.Realized(kind.ToLowerInvariant(), key + (anyInferred ? " [inferred-seam]" : ""));
             var record = $"public sealed record {inputName}({string.Join(", ", fields)});";
-            return ($"    static bool {kind}_{i}({inputName} input) => {expr};", record);
+            return ($"{guardComment}    static bool {kind}_{i}({inputName} input) => {expr};", record);
         }
         catch (Gen.Core.UnsupportedConstruct e)
         {
             report.Unsupported(kind.ToLowerInvariant(), key, e.Message);
-            return ($"    static bool {kind}_{i}() => throw new NotImplementedException(\"unsupported: {Escape(text)}\");", null);
+            return ($"{guardComment}    static bool {kind}_{i}() => throw new NotImplementedException(\"unsupported: {Escape(text)}\");", null);
         }
     }
 
@@ -571,7 +579,7 @@ public static class DotnetEmitter
         var records = new List<string>();
         for (var i = 0; i < e.Invariants.Count; i++)
         {
-            var (method, rec) = Predicate("Invariant", i, e.Invariants[i].Ast, e.Invariants[i].Text, opId: null, entityId: e.Id, gm, report);
+            var (method, rec) = Predicate("Invariant", i, e.Invariants[i].Ast, e.Invariants[i].Text, opId: null, entityId: e.Id, gm, report, e.Invariants[i].GuardRef);
             methods.Add(method.Replace("static bool", "public static bool"));
             if (rec is not null) records.Add(rec);
         }

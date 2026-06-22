@@ -28,6 +28,7 @@ public static class Completeness
             x.Add(("entity", en.Id));
             AddExt(x, en.Ext, en.Id);
             if (en.Invariants.Count > 0) x.Add(("invariant", en.Id));
+            if (en.Invariants.Any(g => g.GuardRef is not null)) x.Add(("guardRef", en.Id));
             foreach (var f in en.Fields)
             {
                 if (f.SourceOfTruth is not null) x.Add(("sourceOfTruth", $"{en.Id}.{f.Name}"));
@@ -43,6 +44,7 @@ public static class Completeness
             if (op.Ownership is not null) x.Add(("ownership", op.Id));
             if (op.Validation.Count > 0) x.Add(("validation", op.Id));
             if (op.Rule.Count > 0) x.Add(("rule", op.Id));
+            if (op.Validation.Concat(op.Rule).Any(g => g.GuardRef is not null)) x.Add(("guardRef", op.Id));
             if (op.Abac is not null) x.Add(("permit", op.Id));
             if (op.Note is not null) x.Add(("note", op.Id));
             foreach (var t in op.Throws) x.Add(("throws", $"{op.Id}->{t}"));

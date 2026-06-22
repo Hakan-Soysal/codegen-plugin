@@ -18,7 +18,7 @@ Sıra: risk-first. Gate önce (drop'ları RED'e çevirir), sonra fix → yeşile
 - [x] C1 · tüm annotation-site'larına Ext (param/field/deployable/module/entity/type) (M)
 - [x] C2 · uncharted tipli model + çağrı-adapter (M)
 - [x] C3 · sourceOfTruth → cross-module FK (S)
-- [ ] C4 · for guard/guardRef kararı (S) — Open Q1
+- [x] C4 · for guard/guardRef kararı (S) — Open Q1
 - [ ] ▸ Checkpoint C: latent drop'lar kapandı
 
 ## Phase D — Partial'lar

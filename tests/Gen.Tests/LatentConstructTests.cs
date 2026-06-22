@@ -114,6 +114,26 @@ public class LatentConstructTests
         finally { Directory.Delete(dir, true); }
     }
 
+    // ── C4 — for guard / guardRef → predicate comment (resolved Q1) ────────
+    [Fact]
+    public void GuardRef_emitted_as_predicate_comment()
+    {
+        var (report, dir, _) = EmitMut(m =>
+        {
+            var create = Op(m, "CreateInvoice");
+            var val = create.Validation.Select((g, i) => i == 0 ? g with { GuardRef = "credit-policy" } : g).ToList();
+            return WithOp(m, create with { Validation = val });
+        });
+        try
+        {
+            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Guards.g.cs"));
+            Assert.Contains("// for guard: \"credit-policy\"", f);
+            Assert.True(report.Covers("guardRef", "CreateInvoice"));
+            NoDrop(report, "guardRef", "CreateInvoice");
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
     // ── C3 — sourceOfTruth → cross-module FK ──────────────────────────────
     [Fact]
     public void SourceOfTruth_emits_cross_module_fk_comment_no_navigation()
