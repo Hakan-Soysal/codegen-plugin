@@ -142,6 +142,31 @@ public class EmitTests
     }
 
     [Fact]
+    public void Error_catalog_and_throws_binding_emitted()
+    {
+        var dir = TempDir();
+        try
+        {
+            var report = new BuildReport();
+            DotnetEmitter.Emit(Gm().Value, dir, report);
+
+            // adlı-hata kataloğu: kod sabiti (agnostik ad; resultType yorumlu)
+            var cat = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Errors.g.cs"));
+            Assert.Contains("public const string DuplicateInvoice = \"DuplicateInvoice\";", cat);
+
+            // throws → tipli Result fabrikası (NotProcessable<T>.Code bağlı)
+            var thr = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Throws.g.cs"));
+            Assert.Contains("ThrowableErrors = [Errors.DuplicateInvoice]", thr);
+            Assert.Contains("new NotProcessable<Invoice>(Errors.DuplicateInvoice, message)", thr);
+
+            // census kayıtları realized
+            Assert.True(report.Covers("error", "DuplicateInvoice"));
+            Assert.True(report.Covers("throws", "CreateInvoice->DuplicateInvoice"));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();

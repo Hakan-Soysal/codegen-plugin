@@ -27,9 +27,7 @@ public class CompletenessTests
     {
         // Sınıf-1 (B fazı):
         "deployable/BillingService",
-        "error/DuplicateInvoice",
         "note/CreateInvoice",
-        "throws/CreateInvoice->DuplicateInvoice",
         // serving raporlama (D1):
         "serving/CreateInvoice:rest", "serving/GetInvoice:rest", "serving/ListInvoices:rest",
     };

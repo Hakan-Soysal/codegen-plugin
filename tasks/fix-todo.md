@@ -8,7 +8,7 @@ Sıra: risk-first. Gate önce (drop'ları RED'e çevirir), sonra fix → yeşile
 - [ ] ▸ Checkpoint A: gate RED, Sınıf-1 drop'lar görünür
 
 ## Phase B — Sınıf-1 fix (fixture'da mevcut)
-- [ ] B1 · throws + named-error catalog → tip + result binding (M)
+- [x] B1 · throws + named-error catalog → tip + result binding (M)
 - [ ] B2 · consistency {risk,mode} → tx/outbox seçim-iskeleti (S)
 - [ ] B3 · deployable → GMDeployable + compose/AppHost stub (M)
 - [ ] B4 · note → doc-comment (S)

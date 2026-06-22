@@ -44,6 +44,8 @@ public static class DotnetEmitter
             var types = gm.Types.Where(t => t.Module == module.Name).ToList();
             var entities = gm.Entities.Where(e => e.Module == module.Name).ToList();
             var events = gm.Events.Where(e => e.Module == module.Name).ToList();
+            var errors = gm.Errors.Where(e => e.Module == module.Name).ToList();
+            if (errors.Count > 0) WriteAlways(Path.Combine(dir, "Errors.g.cs"), ErrorsFile(module.Name, errors, report));
             if (events.Count > 0) WriteAlways(Path.Combine(dir, "Events.g.cs"), EventsFile(module.Name, events));
             if (types.Count > 0) WriteAlways(Path.Combine(dir, "Types.g.cs"), TypesFile(module.Name, types));
             if (entities.Count > 0) WriteAlways(Path.Combine(dir, "Entities.g.cs"), EntitiesFile(module.Name, entities, report));
@@ -70,6 +72,8 @@ public static class DotnetEmitter
                 }
                 var ext = ExtPartial(module.Name, op, report);
                 if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
+                var throws = ThrowsPartial(module.Name, op, gm, report);
+                if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
                 report.Realized("operation", op.Id);
             }
         }
@@ -180,6 +184,65 @@ public static class DotnetEmitter
         }
         return sb.ToString();
     }
+
+    // ── adlı-hata kataloğu + throws binding (ADR-0022 K8/K9) ──────────────
+    // error → kod sabiti (agnostik ad; wire-kod yok). resultType → Result<T> alt-tipi (yorumlu).
+    static string ErrorsFile(string module, List<ErrorJson> errors, BuildReport report)
+    {
+        var sb = new StringBuilder($"namespace {Root}.{module};\n\n");
+        sb.Append("// adlı-hata kataloğu (ADR-0022 K8/K9): kod = agnostik ad; resultType → Result<T> alt-tipi.\n");
+        sb.Append("public static class Errors\n{\n");
+        foreach (var e in errors)
+        {
+            report.Realized("error", e.Id);
+            sb.Append($"    // resultType: {e.ResultType}\n");
+            sb.Append($"    public const string {e.Id} = \"{Escape(e.Id)}\";\n");
+        }
+        sb.Append("}\n");
+        return sb.ToString();
+    }
+
+    // op.throws → atılabilir hata kodları + tipli Result fabrikaları (closed taksonomi; NotProcessable<T>.Code bağlı).
+    static string? ThrowsPartial(string module, GmOperation op, GenerationModel gm, BuildReport report)
+    {
+        if (op.Op.Throws.Count == 0) return null;
+        var ret = ReturnType(op);
+        var consts = new List<string>();
+        var factories = new List<string>();
+        foreach (var id in op.Op.Throws)
+        {
+            report.Realized("throws", $"{op.Id}->{id}");
+            var err = gm.Errors.FirstOrDefault(e => e.Id == id);
+            var codeRef = err is null || err.Module == module ? $"Errors.{id}" : $"{Root}.{err.Module}.Errors.{id}";
+            consts.Add(codeRef);
+            factories.Add(ThrowFactory(err?.ResultType ?? "NotProcessable", ret, id, codeRef));
+        }
+        return
+            $$"""
+            using {{Root}};
+
+            namespace {{Root}}.{{module}};
+
+            // throws: op'un atabileceği adlı-hatalar → tipli Result fabrikaları (iş gövdesi çağırır).
+            public partial class {{op.Id}}Handler
+            {
+                public static readonly string[] ThrowableErrors = [{{string.Join(", ", consts)}}];
+
+            {{string.Join("\n", factories)}}
+            }
+
+            """;
+    }
+
+    // resultType → Result<T> alt-tipi fabrikası (closed taksonomi; tanınmayan → NotProcessable kod-bağı).
+    static string ThrowFactory(string resultType, string ret, string name, string codeRef) => resultType switch
+    {
+        "NotValid" => $"    public static Result<{ret}> {name}(IReadOnlyDictionary<string, string> errors) => new NotValid<{ret}>(errors);",
+        "NotAuthorized" => $"    public static Result<{ret}> {name}(string reason) => new NotAuthorized<{ret}>(reason);",
+        "NotAuthenticated" => $"    public static Result<{ret}> {name}(string reason) => new NotAuthenticated<{ret}>(reason);",
+        "ServerError" => $"    public static Result<{ret}> {name}(string message) => new ServerError<{ret}>(message);",
+        _ => $"    public static Result<{ret}> {name}(string message) => new NotProcessable<{ret}>({codeRef}, message);"
+    };
 
     // ── boundary (external/uncharted çağrı-adapter) + saga (calls+compensate) ──
     static string BoundaryFile(GenerationModel gm, BuildReport report)
