@@ -6,7 +6,7 @@
 - [x] F2 · Decimal/non-int literal tip-uyumu — ExprBuild .NET-only type-aware literal (🔴 CS0019, INV-4)
 - [x] F3 · `paginated by` strategy + size fidelity (offset≠cursor, size default) (🟠)
 - [x] F4 · GET route-token olmayan param binding (🟠 CS7036)
-- [ ] F5 · Gate `Covers` substring → sınır-duyarlı eşleşme (🟡 soundness)
+- [x] F5 · Gate `Covers` substring → sınır-duyarlı eşleşme (🟡 soundness)
 - [ ] F6 · Manifest-layer N/A belgeleme (@internal, ext@external/uncharted/error/event) + minör (permit comment) (🟡/⚪)
 
 Not: @internal ve ext@external/error/event'in GERÇEK fix'i CommandDSL/manifest.ts'te (working-dir dışı, local-only kuralı → kullanıcı onayı gerekir). Bu repo'da yalnız belgeleme + savunma.

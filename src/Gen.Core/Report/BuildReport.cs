@@ -26,7 +26,14 @@ public sealed class BuildReport
     /// <summary>Bir construct örneği zaten kayıtlı mı (realized/unsupported) — gate matching için.</summary>
     public bool Covers(string construct, string owner) =>
         _entries.Any(e => string.Equals(e.Construct, construct, StringComparison.OrdinalIgnoreCase)
-                          && e.Status != ConstructStatus.SilentDrop && e.Id.Contains(owner, StringComparison.Ordinal));
+                          && e.Status != ConstructStatus.SilentDrop && IdMatches(e.Id, owner));
+
+    /// <summary>Census owner ↔ rapor Id eşleşmesi: tam eşit VEYA owner + sınır-ayracı önek
+    /// (compound Id'ler: "{op}#Validation0", "{op}->{err}", "{op}:{proto}", " [inferred-seam]").
+    /// Substring değil — "Get" census'u "GetInvoice" raporunu YANLIŞ örtmesin (INV-7 soundness).</summary>
+    static bool IdMatches(string id, string owner) =>
+        id == owner || (id.StartsWith(owner, StringComparison.Ordinal)
+                        && id.Length > owner.Length && id[owner.Length] is '#' or '-' or ':' or ' ');
 
     public IReadOnlyList<BuildEntry> Entries => _entries;
     public bool Clean => _entries.All(e => e.Status == ConstructStatus.Realized);

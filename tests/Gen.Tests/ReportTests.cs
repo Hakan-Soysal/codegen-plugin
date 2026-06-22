@@ -16,6 +16,22 @@ public class ReportTests
     }
 
     [Fact]
+    public void Covers_matches_compound_ids_but_not_prefix_collisions()
+    {
+        var r = new BuildReport();
+        r.Realized("validation", "CreateInvoice#Validation0 [inferred-seam]");
+        r.Realized("throws", "CreateInvoice->DuplicateInvoice");
+        r.Realized("roles", "GetInvoice");
+        // sınır-ayraçlı compound Id'ler census owner'ını örter
+        Assert.True(r.Covers("validation", "CreateInvoice"));
+        Assert.True(r.Covers("throws", "CreateInvoice"));
+        Assert.True(r.Covers("roles", "GetInvoice"));
+        // ama prefix-çakışması ÖRTMEZ (substring soundness hatası)
+        Assert.False(r.Covers("roles", "Get"));
+        Assert.False(r.Covers("roles", "GetInvoiceX"));
+    }
+
+    [Fact]
     public void Json_is_deterministically_ordered()
     {
         var r = new BuildReport();
