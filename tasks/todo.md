@@ -10,10 +10,10 @@ Sıra: yukarıdan aşağı (dependency + risk-first). Her task bitince `dotnet b
 - [x] ▸ Checkpoint: Foundation
 
 ## Phase 2 — .NET walking skeleton
-- [ ] Task 5a · Operation → Command/Query + Handler.g.cs + Handler.Logic.cs (M)
-- [ ] Task 5b · serving → Minimal API endpoint; command/query türevi (M)
-- [ ] Task 6 · Result<T> 6'lı taksonomi (S)
-- [ ] ▸ Checkpoint: Walking skeleton (üretilen app DERLENİYOR)
+- [x] Task 5a · Operation → Command/Query + Handler.g.cs + Handler.Logic.cs (M)
+- [x] Task 5b · serving → Minimal API endpoint; command/query türevi (M)
+- [x] Task 6 · Result<T> 6'lı taksonomi (S)
+- [x] ▸ Checkpoint: Walking skeleton (üretilen app DERLENİYOR)
 
 ## Phase 3 — ExprNode → C# predicate
 - [ ] Task 7 · ExprNode → C# emitter + test (M)
