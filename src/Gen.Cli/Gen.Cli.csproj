@@ -10,6 +10,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- global dotnet tool: `dotnet pack` -> `dotnet tool install -g` -> `techgen <manifest> <out>` -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>techgen</ToolCommandName>
+    <PackageId>Vennyx.TechGen</PackageId>
+    <Version>0.1.0</Version>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../../nupkg</PackageOutputPath>
   </PropertyGroup>
 
 </Project>
