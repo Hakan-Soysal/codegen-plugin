@@ -17,6 +17,8 @@ public static class DotnetEmitter
     public static void Emit(GenerationModel gm, string outDir, BuildReport report)
     {
         Directory.CreateDirectory(outDir);
+        _written = new();                                    // bu run'da yazılan Generated dosyalar
+        var prev = ProvenanceIo.TryRead(outDir);             // prune için önceki manifest (yoksa/bozuksa null)
         var src = Path.Combine(outDir, "src");
         Directory.CreateDirectory(src);
 
@@ -112,10 +114,54 @@ public static class DotnetEmitter
         }
 
         WriteAlways(Path.Combine(outDir, "Program.cs"), Program(gm));
+
+        WriteProvenanceAndPrune(outDir, prev);
+    }
+
+    /// <summary>Manifest-diff prune (orphan silme) + provenance yazımı. Yalnız ÖNCEDEN üretilmiş
+    /// (prev'deki Generated) ve bu run'da YAZILMAYAN yolları siler → insan dosyasına asla dokunmaz.</summary>
+    static void WriteProvenanceAndPrune(string outDir, Provenance? prev)
+    {
+        var written = _written!
+            .Select(w => (rel: Path.GetRelativePath(outDir, w.abs).Replace('\\', '/'), w.sha))
+            .OrderBy(x => x.rel, StringComparer.Ordinal)
+            .ToList();
+        var writtenSet = written.Select(x => x.rel).ToHashSet(StringComparer.Ordinal);
+
+        var pruned = false;
+        if (prev is not null)   // prev null = ilk run veya bozuk manifest → silme yok
+            foreach (var e in prev.Files.Where(f => f.Class == nameof(FileClass.Generated)))
+                if (!writtenSet.Contains(e.Path))
+                {
+                    var abs = Path.Combine(outDir, e.Path);
+                    if (File.Exists(abs)) { File.Delete(abs); pruned = true; }
+                }
+
+        if (pruned)   // orphan silindiyse artık-boş dizinleri temizle (en derin önce)
+            foreach (var d in Directory.EnumerateDirectories(outDir, "*", SearchOption.AllDirectories)
+                         .OrderByDescending(x => x.Length).ToList())
+                if (Directory.Exists(d) && !Directory.EnumerateFileSystemEntries(d).Any())
+                    Directory.Delete(d);
+
+        var ver = typeof(DotnetEmitter).Assembly.GetName().Version?.ToString() ?? "0";
+        ProvenanceIo.Write(outDir, new Provenance("techgen", ver,
+            written.Select(x => new ProvenanceEntry(x.rel, nameof(FileClass.Generated), x.sha)).ToList()));
     }
 
     // ── dosya yazımı (regeneration sözleşmesi) ──────────────────────────
-    static void WriteAlways(string path, string content) => File.WriteAllText(path, content);
+    // Bu run'da yazılan Generated dosyaları (prune + provenance için). ThreadStatic:
+    // Emit senkron tek thread'de koşar; paralel testler ayrı thread'lerde izole.
+    [ThreadStatic] static List<(string abs, string sha)>? _written;
+
+    // Generated: her zaman üretilir, write-only-if-changed (mtime churn / watch döngüsü önlenir).
+    static void WriteAlways(string path, string content)
+    {
+        _written?.Add((path, ProvenanceIo.Sha256(content)));
+        if (File.Exists(path) && File.ReadAllText(path) == content) return;
+        File.WriteAllText(path, content);
+    }
+
+    // HumanSeam: insan/LLM sahibi, asla ezilmez, yoksa-üret. Prune EDİLMEZ (provenance'a girmez).
     static void WriteIfAbsent(string path, string content) { if (!File.Exists(path)) File.WriteAllText(path, content); }
 
     // ── şablonlar ───────────────────────────────────────────────────────
