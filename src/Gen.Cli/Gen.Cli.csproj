@@ -15,7 +15,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>techgen</ToolCommandName>
     <PackageId>Vennyx.TechGen</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <PackageOutputPath>$(MSBuildThisFileDirectory)../../nupkg</PackageOutputPath>
   </PropertyGroup>
 
