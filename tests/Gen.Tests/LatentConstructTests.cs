@@ -167,7 +167,7 @@ public class LatentConstructTests
             WithOp(m, Op(m, "GetInvoice") with { Visibility = "internal" }));   // serving korunur, route DÜŞMELİ
         try
         {
-            var prog = File.ReadAllText(Path.Combine(dir, "Program.cs"));
+            var prog = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Wiring.g.cs"));   // route'lar Faz3'te Wiring fragment'ında
             Assert.DoesNotContain("\"/invoices/{id}\"", prog);   // internal GetInvoice → route YOK
             Assert.Contains("\"/invoices\"", prog);              // exposed CreateInvoice/ListInvoices → route VAR
             Assert.True(report.Covers("visibility", "GetInvoice"));
@@ -249,7 +249,7 @@ public class LatentConstructTests
         var (report, dir, _) = EmitMut(m => m);   // fixture GetInvoice: route /invoices/{id} + non-route query param includeVoid
         try
         {
-            var prog = File.ReadAllText(Path.Combine(dir, "Program.cs"));
+            var prog = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Wiring.g.cs"));   // route'lar Faz3'te Wiring fragment'ında
             // lambda hem route token'ı hem non-route query param'ı içermeli (ctor arity tam)
             Assert.Contains("string id", prog);
             Assert.Contains("bool includeVoid", prog);

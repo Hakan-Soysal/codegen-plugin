@@ -130,4 +130,34 @@ public class CharacterizationTests
         }
         finally { Directory.Delete(dir, true); }
     }
+
+    [Fact]
+    public void Human_shell_program_and_csproj_survive_regeneration()   // Faz 3 HumanShell sözleşmesi
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "gen-char-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var gm = GmBuilder.Build(
+                Json.Parse<ManifestJson>(Fixtures.Read("manifest.json")),
+                Json.Parse<ContractFile>(Fixtures.Read("operations.json")));
+            DotnetEmitter.Emit(gm, dir, new BuildReport());
+
+            // insan shell'i düzenler (auth middleware, custom DI vb.)
+            var prog = Path.Combine(dir, "Program.cs");
+            var csproj = Path.Combine(dir, "App.csproj");
+            File.WriteAllText(prog, "// HUMAN: custom pipeline\n");
+            File.WriteAllText(csproj, "<!-- HUMAN: custom packages -->\n");
+
+            DotnetEmitter.Emit(gm, dir, new BuildReport());   // regen
+
+            Assert.Equal("// HUMAN: custom pipeline\n", File.ReadAllText(prog));        // HumanShell ezilmedi
+            Assert.Equal("<!-- HUMAN: custom packages -->\n", File.ReadAllText(csproj));
+            // ama generated aggregator HER ZAMAN üretilir (shell ona güvenir)
+            var boot = File.ReadAllText(Path.Combine(dir, "gen", "Bootstrap.g.cs"));
+            Assert.Contains("AddGenerated", boot);
+            Assert.Contains("MapGenerated", boot);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

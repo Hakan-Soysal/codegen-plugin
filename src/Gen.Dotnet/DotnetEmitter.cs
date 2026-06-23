@@ -23,7 +23,8 @@ public static class DotnetEmitter
         Directory.CreateDirectory(gen);
         var src = Path.Combine(outDir, "src");               // HumanSeam: {op}Handler.Logic.cs (yoksa-üret)
 
-        WriteAlways(Path.Combine(outDir, "App.csproj"), Csproj());
+        WriteIfAbsent(Path.Combine(outDir, "App.csproj"), Csproj());         // HumanShell: yoksa-üret
+        WriteAlways(Path.Combine(gen, "Generated.props"), GeneratedProps()); // üreteç-sahibi paket manifesti
         WriteAlways(Path.Combine(gen, "Result.g.cs"), ResultTypes());        // Task 6
         WriteAlways(Path.Combine(gen, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
 
@@ -52,6 +53,7 @@ public static class DotnetEmitter
             var dir = Path.Combine(gen, module.Name);          // Generated .g.cs → gen/{Module}
             Directory.CreateDirectory(dir);
             var humanDir = Path.Combine(src, module.Name);     // HumanSeam Logic.cs → src/{Module}
+            WriteAlways(Path.Combine(dir, "Wiring.g.cs"), ModuleWiring(module, gm));   // Add{M}/Map{M}Module
 
             var types = gm.Types.Where(t => t.Module == module.Name).ToList();
             var entities = gm.Entities.Where(e => e.Module == module.Name).ToList();
@@ -116,7 +118,8 @@ public static class DotnetEmitter
             }
         }
 
-        WriteAlways(Path.Combine(outDir, "Program.cs"), Program(gm));
+        WriteAlways(Path.Combine(gen, "Bootstrap.g.cs"), GeneratedBootstrap(gm));   // AddGenerated/MapGenerated
+        WriteIfAbsent(Path.Combine(outDir, "Program.cs"), ProgramShell());          // HumanShell: yoksa-üret
 
         WriteProvenanceAndPrune(outDir, prev);
     }
@@ -168,22 +171,6 @@ public static class DotnetEmitter
     static void WriteIfAbsent(string path, string content) { if (!File.Exists(path)) File.WriteAllText(path, content); }
 
     // ── şablonlar ───────────────────────────────────────────────────────
-    static string Csproj() =>
-        """
-        <Project Sdk="Microsoft.NET.Sdk.Web">
-          <PropertyGroup>
-            <TargetFramework>net10.0</TargetFramework>
-            <Nullable>enable</Nullable>
-            <ImplicitUsings>enable</ImplicitUsings>
-          </PropertyGroup>
-          <ItemGroup>
-            <!-- ponytail: pin; gerekince bump -->
-            <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-          </ItemGroup>
-        </Project>
-
-        """;
-
     static string ResultTypes() =>
         $$"""
         namespace {{Root}};
@@ -934,44 +921,111 @@ public static class DotnetEmitter
             """;
     }
 
-    static string Program(GenerationModel gm)
+    // ── HumanShell: yoksa-üret, asla ezilmez (insan sahibi). Pipeline sırası insan-kontrolünde. ──
+    static string ProgramShell() =>
+        """
+        using App;
+
+        var builder = WebApplication.CreateBuilder(args);
+        builder.Services.AddGenerated();   // üretilen DI (gen/Bootstrap.g.cs; imza donuk)
+
+        var app = builder.Build();
+
+        // ── HTTP pipeline — SIRA İNSAN-SAHİPLİ (auth/cors/exception-handler buraya) ──
+        // app.UseExceptionHandler(); app.UseAuthentication(); app.UseAuthorization();
+
+        app.MapGenerated();                // üretilen endpoint'ler (gen/Bootstrap.g.cs; imza donuk)
+        app.Run();
+        """;
+
+    // HumanShell csproj (yoksa-üret): üreteç-sahibi paketleri gen/Generated.props'tan koşullu import eder.
+    static string Csproj() =>
+        """
+        <Project Sdk="Microsoft.NET.Sdk.Web">
+
+          <PropertyGroup>
+            <TargetFramework>net10.0</TargetFramework>
+            <Nullable>enable</Nullable>
+            <ImplicitUsings>enable</ImplicitUsings>
+          </PropertyGroup>
+
+          <!-- üreteç-sahibi paket manifesti; koşullu (fresh clone / mid-wipe build'i kırmasın) -->
+          <Import Project="gen/Generated.props" Condition="Exists('gen/Generated.props')" />
+
+        </Project>
+        """;
+
+    // Generated: üreteç-sahibi paket manifesti (gen/Generated.props). İnsan csproj'u bunu import eder.
+    static string GeneratedProps() =>
+        """
+        <Project>
+          <ItemGroup>
+            <!-- ponytail: pin; gerekince bump -->
+            <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+          </ItemGroup>
+        </Project>
+        """;
+
+    // Generated: AddGenerated/MapGenerated aggregator. İmzalar DONUK (yeni modül = sadece gövde değişir).
+    // gm-düzeyi GLOBAL kayıtlar burada (tek AppDbContext, IEventBus, IIdempotencyStore, external/uncharted
+    // client, subscription consumer) — per-module Wiring'e DEĞİL.
+    static string GeneratedBootstrap(GenerationModel gm)
     {
-        var usings = new StringBuilder($"using {Root};\n");
-        usings.Append("using Microsoft.EntityFrameworkCore;\n");
-        foreach (var m in gm.Modules) usings.Append($"using {Root}.{m.Name};\n");
+        var sb = new StringBuilder();
+        if (gm.Entities.Count > 0) sb.Append("using Microsoft.EntityFrameworkCore;\n");
+        foreach (var m in gm.Modules) sb.Append($"using {Root}.{m.Name};\n");
+        sb.Append($"\nnamespace {Root};\n\npublic static class GeneratedBootstrap\n{{\n");
 
-        var di = new StringBuilder();
+        sb.Append("    public static IServiceCollection AddGenerated(this IServiceCollection services)\n    {\n");
         if (gm.Entities.Count > 0)
-            di.Append("builder.Services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
+            sb.Append("        services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
         if (gm.Events.Count > 0)
-            di.Append("builder.Services.AddScoped<IEventBus, OutboxEventBus>();\n");
+            sb.Append("        services.AddScoped<IEventBus, OutboxEventBus>();\n");
         foreach (var ext in gm.Externals)
-            di.Append($"builder.Services.AddSingleton<I{ext.Name}, {ext.Name}Client>();\n");
+            sb.Append($"        services.AddSingleton<I{ext.Name}, {ext.Name}Client>();\n");
         foreach (var u in gm.Uncharted)
-            di.Append($"builder.Services.AddSingleton<{Root}.Uncharted.{u.Name}.I{u.Name}, {Root}.Uncharted.{u.Name}.{u.Name}Client>();\n");
+            sb.Append($"        services.AddSingleton<{Root}.Uncharted.{u.Name}.I{u.Name}, {Root}.Uncharted.{u.Name}.{u.Name}Client>();\n");
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
-            di.Append("builder.Services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();\n");
+            sb.Append("        services.AddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();\n");
         foreach (var s in gm.Subscriptions)
-            di.Append($"builder.Services.AddScoped<{s.Event.Name}To{s.Consumer.Op}Consumer>();\n");
-        var maps = new StringBuilder();
-        foreach (var op in gm.Operations)
+            sb.Append($"        services.AddScoped<{s.Event.Name}To{s.Consumer.Op}Consumer>();\n");
+        foreach (var m in gm.Modules)
+            sb.Append($"        services.Add{m.Name}Module();\n");
+        sb.Append("        return services;\n    }\n\n");
+
+        sb.Append("    public static IEndpointRouteBuilder MapGenerated(this IEndpointRouteBuilder app)\n    {\n");
+        foreach (var m in gm.Modules)
+            sb.Append($"        app.Map{m.Name}Module();\n");
+        sb.Append("        return app;\n    }\n}\n");
+        return sb.ToString();
+    }
+
+    // Generated: per-module Add{M}Module/Map{M}Module. Per-op handler/hosted-service kayıtları + o modülün route'ları.
+    static string ModuleWiring(ModuleDecl module, GenerationModel gm)
+    {
+        var ops = gm.Operations.Where(o => o.Module == module.Name).ToList();
+        var sb = new StringBuilder();
+        sb.Append($"using {Root};\n\nnamespace {Root}.{module.Name};\n\npublic static class {module.Name}ModuleWiring\n{{\n");
+
+        sb.Append($"    public static IServiceCollection Add{module.Name}Module(this IServiceCollection services)\n    {{\n");
+        foreach (var op in ops)
         {
-            di.Append($"builder.Services.AddScoped<{op.Id}Handler>();\n");
+            sb.Append($"        services.AddScoped<{op.Id}Handler>();\n");
             foreach (var t in op.Op.Ext?.Where(e => e.Ns == "trigger") ?? Enumerable.Empty<ExtJson>())
-                di.Append($"builder.Services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
-            if (op.Op.Visibility != "internal")   // internal op → public route YOK (visibility semantiği)
-                foreach (var s in op.Op.Serving)
-                    maps.Append(MapLine(op, s));
+                sb.Append($"        services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
         }
+        sb.Append("        return services;\n    }\n\n");
 
-        return
-            $$"""
-            {{usings}}
-            var builder = WebApplication.CreateBuilder(args);
-            {{di}}var app = builder.Build();
-
-            {{maps}}app.Run();
-            """;
+        sb.Append($"    public static IEndpointRouteBuilder Map{module.Name}Module(this IEndpointRouteBuilder app)\n    {{\n");
+        foreach (var op in ops)
+            if (op.Op.Visibility != "internal")   // internal op → public route YOK
+                foreach (var s in op.Op.Serving)
+                {
+                    var line = MapLine(op, s);
+                    if (line.Length > 0) sb.Append("        " + line);
+                }
+        sb.Append("        return app;\n    }\n}\n");
+        return sb.ToString();
     }
 
     static string MapLine(GmOperation op, ServingJson s)
