@@ -50,7 +50,7 @@ public class LatentConstructTests
             WithOp(m, Op(m, "CreateInvoice") with { Consistency = new Consistency("eventual", "durable") }));
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Consistency.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Consistency.g.cs"));
             Assert.Contains("outbox", f);
             Assert.Contains("ConsistencyRisk = \"eventual\"", f);
             Assert.Contains("ConsistencyMode = \"durable\"", f);
@@ -67,7 +67,7 @@ public class LatentConstructTests
         var (report, dir, _) = EmitMut(m => m);   // fixture already has BillingService(units=[Billing])
         try
         {
-            var host = File.ReadAllText(Path.Combine(dir, "src", "Host.g.cs"));
+            var host = File.ReadAllText(Path.Combine(dir, "gen", "Host.g.cs"));
             Assert.Contains("public static class DeploymentTopology", host);
             Assert.Contains("[\"BillingService\"] = [\"Billing\"],", host);
             Assert.True(report.Covers("deployable", "BillingService"));
@@ -93,10 +93,10 @@ public class LatentConstructTests
         });
         try
         {
-            var trig = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Trigger.g.cs"));
+            var trig = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Trigger.g.cs"));
             Assert.Contains("public sealed class CreateInvoiceCronTrigger", trig);
             Assert.Contains(": IHostedService", trig);
-            var extf = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Ext.g.cs"));
+            var extf = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Ext.g.cs"));
             Assert.Contains("public const string HttpRoute = \"/invoices\";", extf);
             Assert.Contains("public const string HttpMethod = \"POST\";", extf);
             Assert.True(report.Covers("@trigger.cron", "CreateInvoice"));
@@ -149,7 +149,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Subscriptions.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Subscriptions.g.cs"));
             Assert.Contains("public sealed class InvoiceCreatedToGetInvoiceConsumer", f);
             Assert.Contains("App.Billing.GetInvoiceHandler handler", f);
             Assert.Contains("App.Billing.InvoiceCreated @event", f);
@@ -190,7 +190,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Boundary.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Boundary.g.cs"));
             Assert.Contains("public static class PaymentGatewaychargeValidation", f);
             Assert.Contains("(input.Amount > 0m)", f);   // amount Decimal → tip-duyarlı 'm' suffix (F2)
             Assert.True(report.Covers("validation", "PaymentGateway.charge"));
@@ -234,7 +234,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Guards.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Guards.g.cs"));
             Assert.Contains("// for guard: \"credit-policy\"", f);
             Assert.True(report.Covers("guardRef", "CreateInvoice"));
             NoDrop(report, "guardRef", "CreateInvoice");
@@ -269,10 +269,10 @@ public class LatentConstructTests
         });
         try
         {
-            var op = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.g.cs"));
+            var op = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices.g.cs"));
             Assert.Contains("int? Offset", op);                 // offset-shaped, NOT cursor
             Assert.DoesNotContain("string? Cursor", op);
-            var page = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.Page.g.cs"));
+            var page = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices.Page.g.cs"));
             Assert.Contains("PaginationStrategy = \"offset\"", page);
             Assert.Contains("DefaultPageSize = 50", page);       // declared size reaches output
         }
@@ -292,7 +292,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Guards.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Guards.g.cs"));
             Assert.Contains("input.Amount > 0.5m", f);          // decimal-safe
             Assert.DoesNotContain("input.Amount > 0.5)", f);     // ham double (CS0019) DEĞİL
         }
@@ -342,7 +342,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Entities.g.cs"));
             Assert.Contains("sourceOfTruth: Customers.Customer", f);
             Assert.DoesNotContain("public Customer Customer", f);   // navigasyon AÇILMAZ
             Assert.True(report.Covers("sourceOfTruth", "Invoice.customerId"));
@@ -369,7 +369,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Uncharted", "PaymentLedger.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Uncharted", "PaymentLedger.g.cs"));
             Assert.Contains("public interface IPaymentLedger", f);
             Assert.Contains("public class Account", f);                        // owned entity
             Assert.Contains("public sealed record Ledger(decimal Balance);", f); // owned type
@@ -387,7 +387,7 @@ public class LatentConstructTests
         var (report, dir, _) = EmitMut(m => m);   // fixture CreateInvoice has a note
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.g.cs"));
             Assert.Contains("/// <summary>Müşteri kredi limiti dış servisten gelir.</summary>", f);
             Assert.True(report.Covers("note", "CreateInvoice"));
             NoDrop(report, "note", "CreateInvoice");

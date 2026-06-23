@@ -19,37 +19,39 @@ public static class DotnetEmitter
         Directory.CreateDirectory(outDir);
         _written = new();                                    // bu run'da yazılan Generated dosyalar
         var prev = ProvenanceIo.TryRead(outDir);             // prune için önceki manifest (yoksa/bozuksa null)
-        var src = Path.Combine(outDir, "src");
-        Directory.CreateDirectory(src);
+        var gen = Path.Combine(outDir, "gen");               // Generated: üreteç-sahibi, gen/ altında, prune'lu
+        Directory.CreateDirectory(gen);
+        var src = Path.Combine(outDir, "src");               // HumanSeam: {op}Handler.Logic.cs (yoksa-üret)
 
         WriteAlways(Path.Combine(outDir, "App.csproj"), Csproj());
-        WriteAlways(Path.Combine(src, "Result.g.cs"), ResultTypes());        // Task 6
-        WriteAlways(Path.Combine(src, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
+        WriteAlways(Path.Combine(gen, "Result.g.cs"), ResultTypes());        // Task 6
+        WriteAlways(Path.Combine(gen, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
 
         foreach (var t in gm.Types) report.Realized(t.Kind, t.Id);
         foreach (var e in gm.Entities) report.Realized("entity", e.Id);
-        if (gm.Entities.Count > 0) WriteAlways(Path.Combine(src, "AppDbContext.g.cs"), DbContextFile(gm));
-        if (gm.Events.Count > 0) WriteAlways(Path.Combine(src, "EventBus.g.cs"), EventBus());
+        if (gm.Entities.Count > 0) WriteAlways(Path.Combine(gen, "AppDbContext.g.cs"), DbContextFile(gm));
+        if (gm.Events.Count > 0) WriteAlways(Path.Combine(gen, "EventBus.g.cs"), EventBus());
         foreach (var ev in gm.Events) report.Realized("event", ev.Id);
-        if (gm.Subscriptions.Count > 0) WriteAlways(Path.Combine(src, "Subscriptions.g.cs"), SubscriptionsFile(gm, report));   // D3
+        if (gm.Subscriptions.Count > 0) WriteAlways(Path.Combine(gen, "Subscriptions.g.cs"), SubscriptionsFile(gm, report));   // D3
 
         if (gm.Deployables.Count > 0)
-            WriteAlways(Path.Combine(src, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
+            WriteAlways(Path.Combine(gen, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
         if (gm.Externals.Count > 0 || gm.CallEdges.Count > 0)
-            WriteAlways(Path.Combine(src, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
+            WriteAlways(Path.Combine(gen, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
         if (gm.Uncharted.Count > 0)
         {
-            Directory.CreateDirectory(Path.Combine(src, "Uncharted"));
-            foreach (var u in gm.Uncharted) WriteAlways(Path.Combine(src, "Uncharted", $"{u.Name}.g.cs"), UnchartedFile(u, report));   // C2
+            Directory.CreateDirectory(Path.Combine(gen, "Uncharted"));
+            foreach (var u in gm.Uncharted) WriteAlways(Path.Combine(gen, "Uncharted", $"{u.Name}.g.cs"), UnchartedFile(u, report));   // C2
         }
         if (gm.Operations.Any(o => o.Op.Idempotent is not null))
-            WriteAlways(Path.Combine(src, "Idempotency.g.cs"), IdempotencyStore());       // Task 19
+            WriteAlways(Path.Combine(gen, "Idempotency.g.cs"), IdempotencyStore());       // Task 19
 
         foreach (var module in gm.Modules)
         {
             report.Realized("module", module.Name);   // module = namespace + dizin (container artefaktı)
-            var dir = Path.Combine(src, module.Name);
+            var dir = Path.Combine(gen, module.Name);          // Generated .g.cs → gen/{Module}
             Directory.CreateDirectory(dir);
+            var humanDir = Path.Combine(src, module.Name);     // HumanSeam Logic.cs → src/{Module}
 
             var types = gm.Types.Where(t => t.Module == module.Name).ToList();
             var entities = gm.Entities.Where(e => e.Module == module.Name).ToList();
@@ -71,7 +73,8 @@ public static class DotnetEmitter
             foreach (var op in gm.Operations.Where(o => o.Module == module.Name))
             {
                 WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op, report));
-                WriteIfAbsent(Path.Combine(dir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
+                Directory.CreateDirectory(humanDir);
+                WriteIfAbsent(Path.Combine(humanDir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
                 var guards = GuardsFile(module.Name, op, gm, report);
                 if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
                 var auth = AuthFile(module.Name, op, report);

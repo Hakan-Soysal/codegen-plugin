@@ -91,13 +91,42 @@ public class CharacterizationTests
             DotnetEmitter.Emit(gm, dir, new BuildReport());
 
             // mtime'ı bilinen geçmişe çek; içerik aynıysa ikinci emit DOKUNMAMALI.
-            var f = Path.Combine(dir, "src", "Result.g.cs");
+            var f = Path.Combine(dir, "gen", "Result.g.cs");
             var past = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             File.SetLastWriteTimeUtc(f, past);
 
             DotnetEmitter.Emit(gm, dir, new BuildReport());
 
             Assert.Equal(past, File.GetLastWriteTimeUtc(f));   // yeniden yazılmadı → mtime korundu
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Removed_operation_prunes_generated_file_but_keeps_human_logic()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "gen-char-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            var gm = GmBuilder.Build(
+                Json.Parse<ManifestJson>(Fixtures.Read("manifest.json")),
+                Json.Parse<ContractFile>(Fixtures.Read("operations.json")));
+            DotnetEmitter.Emit(gm, dir, new BuildReport());
+
+            var genFile = Path.Combine(dir, "gen", "Billing", "GetInvoice.g.cs");
+            var humanLogic = Path.Combine(dir, "src", "Billing", "GetInvoiceHandler.Logic.cs");
+            Assert.True(File.Exists(genFile), "ön koşul: .g.cs üretildi");
+            Assert.True(File.Exists(humanLogic), "ön koşul: Logic.cs üretildi");
+            File.WriteAllText(humanLogic, "// HUMAN BODY\n");   // insan emeği
+
+            // GetInvoice manifest'ten çıkarıldı → yeniden üret
+            var trimmed = gm with { Operations = gm.Operations.Where(o => o.Id != "GetInvoice").ToList() };
+            DotnetEmitter.Emit(trimmed, dir, new BuildReport());
+
+            Assert.False(File.Exists(genFile), "orphan .g.cs prune edilmeli (manifest-diff)");
+            Assert.True(File.Exists(humanLogic), "human Logic.cs korunmalı — orphan, asla auto-silinmez");
+            Assert.Equal("// HUMAN BODY\n", File.ReadAllText(humanLogic));
         }
         finally { Directory.Delete(dir, true); }
     }

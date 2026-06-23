@@ -66,7 +66,7 @@ public class EmitTests
         try
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.g.cs"));
             Assert.Contains("public sealed record CreateInvoiceCommand(string CustomerId, decimal Amount);", f);
             Assert.Contains("public partial Task<Result<Invoice>> ExecuteAsync(CreateInvoiceCommand request, CancellationToken ct);", f);
         }
@@ -80,10 +80,10 @@ public class EmitTests
         try
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
-            var ent = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs"));
+            var ent = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Entities.g.cs"));
             Assert.Contains("public class Invoice", ent);
             Assert.Contains("[Timestamp] public byte[] RowVersion", ent);   // concurrency optimistic
-            var ctx = File.ReadAllText(Path.Combine(dir, "src", "AppDbContext.g.cs"));
+            var ctx = File.ReadAllText(Path.Combine(dir, "gen", "AppDbContext.g.cs"));
             Assert.Contains("public DbSet<App.Billing.Invoice> Invoices", ctx);
         }
         finally { Directory.Delete(dir, true); }
@@ -96,10 +96,10 @@ public class EmitTests
         try
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
-            var ev = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Events.g.cs"));
+            var ev = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Events.g.cs"));
             Assert.Contains("public sealed record InvoiceCreated(string InvoiceId, Money Amount);", ev);
-            Assert.True(File.Exists(Path.Combine(dir, "src", "EventBus.g.cs")));
-            var auth = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Auth.g.cs"));
+            Assert.True(File.Exists(Path.Combine(dir, "gen", "EventBus.g.cs")));
+            var auth = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Auth.g.cs"));
             Assert.Contains("RequiredRoles = [\"Clerk\"]", auth);
         }
         finally { Directory.Delete(dir, true); }
@@ -112,7 +112,7 @@ public class EmitTests
         try
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
-            var f = File.ReadAllText(Path.Combine(dir, "src", "Billing", "ListInvoices.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices.g.cs"));
             Assert.Contains("Page<Invoice>", f);
             Assert.Contains("string? Cursor, int Size", f);
             Assert.Contains("ORDER BY CreatedAt desc", f);
@@ -129,12 +129,12 @@ public class EmitTests
             var report = new BuildReport();
             DotnetEmitter.Emit(Gm().Value, dir, report);
 
-            var boundary = File.ReadAllText(Path.Combine(dir, "src", "Boundary.g.cs"));
+            var boundary = File.ReadAllText(Path.Combine(dir, "gen", "Boundary.g.cs"));
             Assert.Contains("public interface IPaymentGateway", boundary);
             Assert.Contains("compensate: PaymentGateway.refund", boundary);            // saga skeleton
-            Assert.True(File.Exists(Path.Combine(dir, "src", "Idempotency.g.cs")));
-            Assert.Contains("IdempotencyKeys = [\"customerId\"]", File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Idem.g.cs")));
-            Assert.Contains("@crypto.encrypted", File.ReadAllText(Path.Combine(dir, "src", "Billing", "Entities.g.cs")));
+            Assert.True(File.Exists(Path.Combine(dir, "gen", "Idempotency.g.cs")));
+            Assert.Contains("IdempotencyKeys = [\"customerId\"]", File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Idem.g.cs")));
+            Assert.Contains("@crypto.encrypted", File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Entities.g.cs")));
 
             // §8 politikaları açıkça çözülmüş (INV-3) — build-report'ta kayıtlı
             using var rep = JsonDocument.Parse(report.ToJson());
@@ -155,11 +155,11 @@ public class EmitTests
             DotnetEmitter.Emit(Gm().Value, dir, report);
 
             // adlı-hata kataloğu: kod sabiti (agnostik ad; resultType yorumlu)
-            var cat = File.ReadAllText(Path.Combine(dir, "src", "Billing", "Errors.g.cs"));
+            var cat = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Errors.g.cs"));
             Assert.Contains("public const string DuplicateInvoice = \"DuplicateInvoice\";", cat);
 
             // throws → tipli Result fabrikası (NotProcessable<T>.Code bağlı)
-            var thr = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice.Throws.g.cs"));
+            var thr = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Throws.g.cs"));
             Assert.Contains("ThrowableErrors = [Errors.DuplicateInvoice]", thr);
             Assert.Contains("new NotProcessable<Invoice>(Errors.DuplicateInvoice, message)", thr);
 
@@ -196,8 +196,8 @@ public class EmitTests
             var gm = Gm().Value;
             DotnetEmitter.Emit(gm, a, new BuildReport());
             DotnetEmitter.Emit(gm, b, new BuildReport());
-            var fa = File.ReadAllText(Path.Combine(a, "src", "Billing", "CreateInvoice.g.cs"));
-            var fb = File.ReadAllText(Path.Combine(b, "src", "Billing", "CreateInvoice.g.cs"));
+            var fa = File.ReadAllText(Path.Combine(a, "gen", "Billing", "CreateInvoice.g.cs"));
+            var fb = File.ReadAllText(Path.Combine(b, "gen", "Billing", "CreateInvoice.g.cs"));
             Assert.Equal(fa, fb);
         }
         finally { Directory.Delete(a, true); Directory.Delete(b, true); }
