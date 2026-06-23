@@ -64,6 +64,40 @@ public static class ExprBuild
     /// <summary>Path → input alan adı (collision-safe Pascal-join): ['resource','creditLimit'] → ResourceCreditLimit.</summary>
     public static string PropName(IReadOnlyList<string> path) => string.Concat(path.Select(Pascal));
 
+    /// <summary>Karşılaştırma bağlamından path tip-ipucu: bir path bir literal ile kıyaslanıyorsa
+    /// (status == "planli", count > 5) o literal'in nötr tipini (String/Bool/Int/Decimal) PropName'e map'ler.
+    /// Manifest çözümü başarısız olan alanlar için doğru C# tipini seçmekte kullanılır (decimal==string CS0019 önler).</summary>
+    public static IReadOnlyDictionary<string, string> InferLiteralTypes(ExprNode root)
+    {
+        var hints = new Dictionary<string, string>(StringComparer.Ordinal);
+        void Rec(ExprNode? n)
+        {
+            if (n is not BinaryNode b) return;
+            if (b.NodeKind is not "and" and not "or")   // cmp/aritmetik: path ↔ literal
+            {
+                Hint(b.Left, b.Right);
+                Hint(b.Right, b.Left);
+            }
+            Rec(b.Left);
+            Rec(b.Right);
+        }
+        void Hint(ExprNode pathSide, ExprNode otherSide)
+        {
+            if (pathSide is PathNode p && LitType(otherSide) is { } t)
+                hints.TryAdd(PropName(p.Path), t);
+        }
+        Rec(root);
+        return hints;
+    }
+
+    static string? LitType(ExprNode n) => n switch
+    {
+        LiteralNode { Value: string } => "String",
+        LiteralNode { Value: bool } => "Bool",
+        LiteralNode { Value: double d } => d == Math.Floor(d) ? "Int" : "Decimal",
+        _ => null
+    };
+
     static string Pascal(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     static string Op(BinaryNode b) => b.NodeKind switch

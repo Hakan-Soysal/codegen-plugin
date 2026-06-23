@@ -16,6 +16,11 @@ public static class Naming
             "Int" => "int",
             "Bool" or "Boolean" => "bool",
             "DateTime" => "DateTime",
+            "Date" => "DateOnly",
+            "Duration" => "TimeSpan",
+            // ponytail: bilinmeyen 'XxxId' = entity-id (foreign-key) referansı → string (ID→string ile tutarlı).
+            // Entity/enum/composite adları (Money, PackageItem, InvoiceStatus) passthrough kalır.
+            _ when type.EndsWith("Id", StringComparison.Ordinal) => "string",
             _ => type   // Money / InvoiceStatus / Invoice → üretilen tip
         };
         return collection ? $"List<{baseType}>" : baseType;

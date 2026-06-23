@@ -15,7 +15,9 @@ public sealed record ContractFile(
 public sealed record ContractMeta(int? SchemaVersion);
 public sealed record ContractSignature(string Actor, string Verb, string Ownership, string Resource);
 public sealed record ContractGuard(string Id, string Kind, string? Role, string? Calendar, string? Text, ExprNode? Ast);
-public sealed record ContractEffect(string Kind, string? Target);
+// Target gerçek contract'ta string ("biz.Invoice") VEYA path dizisi (["Appointment","status"]).
+// Emit'te tüketilmiyor (yalnız realizes-join için parse edilir), bu yüzden toleranslı JsonElement.
+public sealed record ContractEffect(string Kind, JsonElement? Target);
 public sealed record ContractAccess(List<string> Writes, List<string> Reads);
 
 public sealed record ContractOp(

@@ -27,6 +27,7 @@ public static class DotnetEmitter
         WriteAlways(Path.Combine(gen, "Generated.props"), GeneratedProps()); // üreteç-sahibi paket manifesti
         WriteAlways(Path.Combine(gen, "Result.g.cs"), ResultTypes());        // Task 6
         WriteAlways(Path.Combine(gen, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
+        WriteAlways(Path.Combine(gen, "GlobalUsings.g.cs"), GlobalUsings(gm)); // cross-module tip çözümü
 
         foreach (var t in gm.Types) report.Realized(t.Kind, t.Id);
         foreach (var e in gm.Entities) report.Realized("entity", e.Id);
@@ -179,6 +180,9 @@ public static class DotnetEmitter
     static string ResultTypes() =>
         $$"""
         namespace {{Root}};
+
+        // Payload'sız komut dönüşü: Result<Unit> (void analoğu).
+        public readonly record struct Unit;
 
         // Kapalı 6'lı result taksonomisi (INV-5). NotAuthenticated AYRI kalır (401 vs 403).
         public abstract record Result<T>;
@@ -701,12 +705,13 @@ public static class DotnetEmitter
         {
             // tip-duyarlı: path → nötr manifest tipi (Decimal literal'leri 'm' suffix'i alır → CS0019 önlenir).
             var (expr, paths) = Gen.Core.Predicate.ExprBuild.Build(ast, p => gm.Env.ResolvePath(gm, p, opId, entityId));
+            var hints = Gen.Core.Predicate.ExprBuild.InferLiteralTypes(ast);   // çözülemeyen alanlar için literal-driven tip
             var inputName = $"{owner}{kind}{i}Input";
             var anyInferred = false;
             var fields = new List<string>();
             foreach (var p in paths)
             {
-                var (cs, resolved) = ResolveType(p, gm, opId, entityId);
+                var (cs, resolved) = ResolveType(p, gm, opId, entityId, hints);
                 if (!resolved) anyInferred = true;
                 fields.Add($"{cs} {Gen.Core.Predicate.ExprBuild.PropName(p)}");
             }
@@ -721,11 +726,15 @@ public static class DotnetEmitter
         }
     }
 
-    // path → C# tip + çözüldü mü. Nötr çözümü GM yapar; burada dile map'lenir. Çözülemeyen→decimal (tipli seam).
-    static (string Cs, bool Resolved) ResolveType(IReadOnlyList<string> path, GenerationModel gm, string? opId, string? entityId)
+    // path → C# tip + çözüldü mü. Nötr çözümü GM yapar; burada dile map'lenir. Çözülemezse
+    // literal-driven ipucu kullanılır (status=="x"→string, count>5→int); o da yoksa son-çare decimal.
+    static (string Cs, bool Resolved) ResolveType(IReadOnlyList<string> path, GenerationModel gm, string? opId, string? entityId,
+        IReadOnlyDictionary<string, string> hints)
     {
         var mt = gm.Env.ResolvePath(gm, path, opId, entityId);
-        return mt is null ? ("decimal", false) : (Naming.Type(mt, false), true);
+        if (mt is not null) return (Naming.Type(mt, false), true);
+        if (hints.TryGetValue(Gen.Core.Predicate.ExprBuild.PropName(path), out var h)) return (Naming.Type(h, false), false);
+        return ("decimal", false);   // son-çare (literal-driven ipucu da yoksa)
     }
 
     static string? InvariantsFile(string module, EntityJson e, GenerationModel gm, BuildReport report)
@@ -970,6 +979,15 @@ public static class DotnetEmitter
           </ItemGroup>
         </Project>
         """;
+
+    // Generated: tüm modül namespace'lerini global using yapar → enum/entity/type modüller arası
+    // referanslansa da (ör. App.Studio entity'si App.Shared enum'unu) per-file using olmadan çözülür.
+    static string GlobalUsings(GenerationModel gm)
+    {
+        var sb = new StringBuilder($"global using {Root};\n");
+        foreach (var m in gm.Modules) sb.Append($"global using {Root}.{m.Name};\n");
+        return sb.ToString();
+    }
 
     // Generated: AddGenerated/MapGenerated aggregator. İmzalar DONUK (yeni modül = sadece gövde değişir).
     // gm-düzeyi GLOBAL kayıtlar burada (tek AppDbContext, IEventBus, IIdempotencyStore, external/uncharted
