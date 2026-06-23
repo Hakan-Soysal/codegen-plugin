@@ -10,6 +10,12 @@ namespace Gen.Go;
 /// <summary>
 /// SEAM SPIKE (Phase 5): aynı GM'den derlenen Go. Amaç kod değil KEŞİF — GM'deki .NET-ism'leri
 /// açığa çıkarmak. Tek paket `app`; result → (T, error)+Failure; stub'lar ayrı `_logic.go` (yoksa-üret).
+///
+/// FAZ 7 / D2 — gen-segregation refactor'una KASITLI hizalanmadı (ertelendi). Bu emitter hâlâ
+/// flat layout + kendi WriteAlways/WriteIfAbsent seam'ini kullanır; gen/ ayrımı, provenance,
+/// write-if-changed, orphan prune YOK. Gerekçe: spike — CLI'ye/pakete dahil değil, sevk edilen
+/// hedef .NET. Hizalamak gerekirse: DotnetEmitter'daki gen/ + provenance + write-if-changed
+/// yaklaşımını buraya da uygula (Applier ortaklaştırması istenirse o zaman değerlendir).
 /// </summary>
 public static class GoEmitter
 {
