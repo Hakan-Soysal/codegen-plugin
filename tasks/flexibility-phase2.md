@@ -32,7 +32,7 @@
   - Mevcut `using Microsoft.EntityFrameworkCore;` UseX'leri kapsar; GetRequiredService/GetConnectionString Web SDK implicit-using.
   - Kabul: her provider string → doğru UseX satırı; null → byte-aynı; bilinmeyen → build-report unsupported.
 
-- [ ] **P2.3 · Generated.props provider paketi (S)**
+- [x] **P2.3 · Generated.props provider paketi (S)**
   - `GeneratedProps` config alır; provider → eşleşen `<PackageReference>` ekler. **Versiyonları doğrula (Context7).**
   - Kabul: provider=sqlite → props'ta Sqlite paketi; null → yalnız EFCore (mevcut).
 

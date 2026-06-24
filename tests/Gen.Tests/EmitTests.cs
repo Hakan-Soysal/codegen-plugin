@@ -203,6 +203,20 @@ public class EmitTests
     }
 
     [Fact]
+    public void DbProvider_config_adds_provider_package_to_props()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport(), new GenConfig("sqlite"));
+            var props = File.ReadAllText(Path.Combine(dir, "gen", "Generated.props"));
+            Assert.Contains("Microsoft.EntityFrameworkCore.Sqlite", props);
+            Assert.Contains("Microsoft.EntityFrameworkCore\" Version=\"10.0.9\"", props);   // EFCore yine var
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Null_config_keeps_empty_provider_seam()
     {
         var dir = TempDir();

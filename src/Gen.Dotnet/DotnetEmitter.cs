@@ -24,7 +24,7 @@ public static class DotnetEmitter
         var src = Path.Combine(outDir, "src");               // HumanSeam: {op}Handler.Logic.cs (yoksa-üret)
 
         WriteIfAbsent(Path.Combine(outDir, "App.csproj"), Csproj());         // HumanShell: yoksa-üret
-        WriteAlways(Path.Combine(gen, "Generated.props"), GeneratedProps()); // üreteç-sahibi paket manifesti
+        WriteAlways(Path.Combine(gen, "Generated.props"), GeneratedProps(config)); // üreteç-sahibi paket manifesti
         WriteAlways(Path.Combine(gen, "Result.g.cs"), ResultTypes());        // Task 6
         WriteAlways(Path.Combine(gen, "ResultHttp.g.cs"), ResultHttp());     // result-type → wire
         WriteAlways(Path.Combine(gen, "GlobalUsings.g.cs"), GlobalUsings(gm)); // cross-module tip çözümü
@@ -984,15 +984,27 @@ public static class DotnetEmitter
         """;
 
     // Generated: üreteç-sahibi paket manifesti (gen/Generated.props). İnsan csproj'u bunu import eder.
-    static string GeneratedProps() =>
-        """
-        <Project>
-          <ItemGroup>
-            <!-- ponytail: pin; gerekince bump -->
-            <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-          </ItemGroup>
-        </Project>
-        """;
+    // dbProvider → eşleşen EF provider paketi (versiyonlar NuGet'ten doğrulandı). null → yalnız EFCore (byte-aynı).
+    static string GeneratedProps(GenConfig? config)
+    {
+        var extra = config?.DbProvider switch
+        {
+            "postgres" => "\n    <PackageReference Include=\"Npgsql.EntityFrameworkCore.PostgreSQL\" Version=\"10.0.2\" />",
+            "sqlite" => "\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.Sqlite\" Version=\"10.0.9\" />",
+            "sqlserver" => "\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.SqlServer\" Version=\"10.0.9\" />",
+            "inmemory" => "\n    <PackageReference Include=\"Microsoft.EntityFrameworkCore.InMemory\" Version=\"10.0.9\" />",
+            _ => ""
+        };
+        return
+            $$"""
+            <Project>
+              <ItemGroup>
+                <!-- ponytail: pin; gerekince bump -->
+                <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />{{extra}}
+              </ItemGroup>
+            </Project>
+            """;
+    }
 
     // Generated: tüm modül namespace'lerini global using yapar → enum/entity/type modüller arası
     // referanslansa da (ör. App.Studio entity'si App.Shared enum'unu) per-file using olmadan çözülür.
