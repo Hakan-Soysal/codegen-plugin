@@ -20,7 +20,7 @@
     `partial void OnModelCreatingPartial(ModelBuilder b);`
   - Kabul: insan partial'ı yokken build yeşil (partial void no-op elide); insan ayrı `partial class AppDbContext`'te `OnModelCreatingPartial` yazıp convention-dışı mapping (kolon tipi/index/tablo adı) verebiliyor → build yeşil. **İnsan stub'ı EMIT ETME** (YAGNI; partial void boşken çalışır).
 
-- [ ] **P1.2 · Entity'leri `partial class` emit (S)** — 🔴→🟢 entity genişletme seam
+- [x] **P1.2 · Entity'leri `partial class` emit (S)** — 🔴→🟢 entity genişletme seam
   - `EntitiesFile` (L252): `public class {e.Id}` → `public partial class {e.Id}`.
   - Kabul: build yeşil; insan ayrı partial'da audit-kolon/soft-delete/computed/navigation ekleyebiliyor.
 

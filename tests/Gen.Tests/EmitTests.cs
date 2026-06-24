@@ -81,7 +81,7 @@ public class EmitTests
         {
             DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
             var ent = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Entities.g.cs"));
-            Assert.Contains("public class Invoice", ent);
+            Assert.Contains("public partial class Invoice", ent);   // entity genişletme seam
             Assert.Contains("[Timestamp] public byte[] RowVersion", ent);   // concurrency optimistic
             var ctx = File.ReadAllText(Path.Combine(dir, "gen", "AppDbContext.g.cs"));
             Assert.Contains("public DbSet<App.Billing.Invoice> Invoices", ctx);

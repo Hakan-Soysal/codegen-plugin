@@ -371,7 +371,7 @@ public class LatentConstructTests
         {
             var f = File.ReadAllText(Path.Combine(dir, "gen", "Uncharted", "PaymentLedger.g.cs"));
             Assert.Contains("public interface IPaymentLedger", f);
-            Assert.Contains("public class Account", f);                        // owned entity
+            Assert.Contains("public partial class Account", f);                 // owned entity (partial: genişletme seam)
             Assert.Contains("public sealed record Ledger(decimal Balance);", f); // owned type
             Assert.Contains("NotImplementedException(\"PaymentLedger.Post\")", f); // call-adapter stub
             Assert.True(report.Covers("uncharted", "PaymentLedger"));

@@ -249,7 +249,7 @@ public static class DotnetEmitter
         foreach (var e in entities)
         {
             sb.Append(ExtComment(e.Ext, e.Id, report));
-            sb.Append($"public class {e.Id}\n{{\n");
+            sb.Append($"public partial class {e.Id}\n{{\n");   // partial: audit/soft-delete/computed/navigation insan-partial seam
             foreach (var f in e.Fields)
             {
                 if (f.Ext is { Count: > 0 })
@@ -506,7 +506,7 @@ public static class DotnetEmitter
         foreach (var e in u.Entities)
         {
             sb.Append(ExtComment(e.Ext, $"{u.Name}.{e.Id}", report));
-            sb.Append($"public class {e.Id}\n{{\n");
+            sb.Append($"public partial class {e.Id}\n{{\n");   // partial: insan-partial genişletme seam
             foreach (var f in e.Fields)
             {
                 sb.Append(ExtComment(f.Ext, $"{u.Name}.{e.Id}.{f.Name}", report, "    "));
