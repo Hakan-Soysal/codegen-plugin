@@ -23,7 +23,7 @@
 
 ## Tasks
 
-- [ ] **P2.1 · `GenConfig` modeli + JSON load (S)**
+- [x] **P2.1 · `GenConfig` modeli + JSON load (S)**
   - Gen.Dotnet'te `record GenConfig(string? DbProvider)` + dosyadan deserialize (System.Text.Json, mevcut `Json` infra).
   - Kabul: örnek `{"dbProvider":"sqlite"}` → DbProvider="sqlite"; dosya yok → null; bozuk JSON → net hata.
 
