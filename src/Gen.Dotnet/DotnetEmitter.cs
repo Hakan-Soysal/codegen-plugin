@@ -422,7 +422,7 @@ public static class DotnetEmitter
             sb.Append($"public interface I{ext.Name}\n{{\n");
             foreach (var b in ext.Operations) { report.Realized("boundary-op", $"{ext.Name}.{b.Id}"); sb.Append($"    {Sig(b)};\n"); }
             sb.Append("}\n\n");
-            sb.Append($"public sealed class {ext.Name}Client : I{ext.Name}\n{{\n");
+            sb.Append($"public class {ext.Name}Client : I{ext.Name}\n{{\n");   // unsealed: insan stub'ı extend edebilir
             foreach (var b in ext.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{ext.Name}.{b.Id}\");\n");
             sb.Append("}\n\n");
             // boundary serving (external'ın protokol-maruziyeti; çağıran-tarafı için metadata) + caller-side validation (INV-4).
@@ -531,7 +531,7 @@ public static class DotnetEmitter
         sb.Append($"public interface I{u.Name}\n{{\n");
         foreach (var b in u.Operations) { report.Realized("boundary-op", $"{u.Name}.{b.Id}"); sb.Append($"    {Sig(b)};\n"); }
         sb.Append("}\n\n");
-        sb.Append($"public sealed class {u.Name}Client : I{u.Name}\n{{\n");
+        sb.Append($"public class {u.Name}Client : I{u.Name}\n{{\n");   // unsealed: insan stub'ı extend edebilir
         foreach (var b in u.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{u.Name}.{b.Id}\");\n");
         sb.Append("}\n\n");
         // uncharted boundary-op: serving (protokol metadata) + param-ext + caller-side validation (external emsali; INV-4)

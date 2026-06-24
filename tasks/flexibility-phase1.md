@@ -31,8 +31,8 @@
   - İnsan Program.cs (shell) içinde `ResultHttp.Override = r => ...;` ile özel zarf bağlar.
   - Kabul: `Override` null iken çıktı **byte-aynı** (mevcut golden bozulmaz); set edilince özel zarf dönüyor. Partial-method DEĞİL (non-void partial insan impl'ini zorlar → default build kırılır).
 
-- [ ] **P1.3 · External (+uncharted) client stub'larını unseal (S, OPSİYONEL/düşük değer)**
+- [x] **P1.3 · External (+uncharted) client stub'larını unseal (S, OPSİYONEL/düşük değer)**
   - `BoundaryFile` (L418) `public sealed class {ext}Client` → `sealed` kaldır; tutarlılık için Uncharted (L527) `{u}Client` aynı.
   - **Not:** Değer marjinal — impl swap zaten DI override ile çalışıyor (`AddSingleton<IPushService, MyImpl>`), subclass gerekmez. Tek faydası: insan stub'ı extend etmek isterse blok kalmasın. Tek-token, sıfır-risk → dahil ama önceliksiz. Atlanırsa Faz 1 yine tamam.
 
-- [ ] **▸ Checkpoint P1 (Complete):** tüm golden-file'lar güncel + emit edilen fixture app `dotnet build` exit 0 + Go seam etkilenmedi (varsa) + determinizm testi yeşil + regen `.Logic.cs` ezmiyor. → 4 eksen 🟢, parametre yüzeyi açılmadı.
+- [x] **▸ Checkpoint P1 (Complete):** tüm golden-file'lar güncel + emit edilen fixture app `dotnet build` exit 0 + Go seam etkilenmedi (varsa) + determinizm testi yeşil + regen `.Logic.cs` ezmiyor. → 4 eksen 🟢, parametre yüzeyi açılmadı.

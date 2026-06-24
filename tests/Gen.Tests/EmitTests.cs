@@ -133,6 +133,7 @@ public class EmitTests
 
             var boundary = File.ReadAllText(Path.Combine(dir, "gen", "Boundary.g.cs"));
             Assert.Contains("public interface IPaymentGateway", boundary);
+            Assert.Contains("public class PaymentGatewayClient", boundary);            // unsealed: insan extend edebilir
             Assert.Contains("compensate: PaymentGateway.refund", boundary);            // saga skeleton
             Assert.True(File.Exists(Path.Combine(dir, "gen", "Idempotency.g.cs")));
             Assert.Contains("IdempotencyKeys = [\"customerId\"]", File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Idem.g.cs")));
