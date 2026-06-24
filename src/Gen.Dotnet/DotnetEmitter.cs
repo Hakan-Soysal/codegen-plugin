@@ -590,7 +590,8 @@ public static class DotnetEmitter
             // @trigger.{{t.Name}} → inbound hosted-service stub (ack/checkpoint/batch = §8 seam).
             public sealed class {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger({{op.Id}}Handler handler) : IHostedService
             {
-                public Task StartAsync(CancellationToken ct) => throw new NotImplementedException($"trigger {{t.Name}}: {{op.Id}} inbound wiring ({nameof(handler)}.ExecuteAsync)");
+                readonly {{op.Id}}Handler _handler = handler;   // inbound wiring StartAsync'te _handler.ExecuteAsync çağırır
+                public Task StartAsync(CancellationToken ct) => throw new NotImplementedException($"trigger {{t.Name}}: {{op.Id}} inbound wiring ({nameof(_handler)}.ExecuteAsync)");
                 public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
             }
             """);
@@ -812,8 +813,9 @@ public static class DotnetEmitter
             report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
             var cls = $"{s.Event.Name}To{s.Consumer.Op}Consumer";
             sb.Append($"public sealed class {cls}({Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler handler)\n{{\n");
+            sb.Append($"    readonly {Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler _handler = handler;\n");
             sb.Append($"    public Task HandleAsync({Root}.{s.Event.Module}.{s.Event.Name} @event, CancellationToken ct = default)\n");
-            sb.Append($"        => throw new NotImplementedException($\"subscription: {s.Event.Name} → {s.Consumer.Op} (event→request eşle + {{nameof(handler)}}.ExecuteAsync)\");\n");
+            sb.Append($"        => throw new NotImplementedException($\"subscription: {s.Event.Name} → {s.Consumer.Op} (event→request eşle + {{nameof(_handler)}}.ExecuteAsync)\");\n");
             sb.Append("}\n\n");
         }
         return sb.ToString();

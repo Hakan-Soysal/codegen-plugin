@@ -55,6 +55,7 @@ public class EmitTests
 
             var (code, output) = Dotnet("build App.csproj -v q --nologo", dir);
             Assert.True(code == 0, "Üretilen app derlenmedi:\n" + output);
+            Assert.DoesNotContain("warning CS", output);   // generated app uyarısız derlenir
         }
         finally { Directory.Delete(dir, true); }
     }
