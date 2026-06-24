@@ -204,19 +204,26 @@ public static class DotnetEmitter
 
         namespace {{Root}};
 
-        // result-type → HTTP wire eşlemesi (pluggable protokol-binding; ponytail: tek REST switch).
+        // result-type → HTTP wire. Override: insan Program.cs'te özel zarf (RFC7807 vb.) bağlar.
+        // ponytail: process-global hook, startup'ta bir kez set edilir; null iken default switch.
         public static class ResultHttp
         {
-            public static IResult ToHttp<T>(Result<T> r) => r switch
+            public static Func<object, IResult>? Override;
+
+            public static IResult ToHttp<T>(Result<T> r)
             {
-                Success<T> s => Results.Ok(s.Value),
-                NotAuthenticated<T> => Results.StatusCode(401),
-                NotAuthorized<T> => Results.StatusCode(403),
-                NotValid<T> v => Results.ValidationProblem(v.Errors.ToDictionary(e => e.Key, e => new[] { e.Value })),
-                NotProcessable<T> p => Results.UnprocessableEntity(new { code = p.Code, message = p.Message }),
-                ServerError<T> e => Results.Json(new { message = e.Message }, statusCode: 500),
-                _ => Results.StatusCode(500)
-            };
+                if (Override is { } custom) return custom(r!);
+                return r switch
+                {
+                    Success<T> s => Results.Ok(s.Value),
+                    NotAuthenticated<T> => Results.StatusCode(401),
+                    NotAuthorized<T> => Results.StatusCode(403),
+                    NotValid<T> v => Results.ValidationProblem(v.Errors.ToDictionary(e => e.Key, e => new[] { e.Value })),
+                    NotProcessable<T> p => Results.UnprocessableEntity(new { code = p.Code, message = p.Message }),
+                    ServerError<T> e => Results.Json(new { message = e.Message }, statusCode: 500),
+                    _ => Results.StatusCode(500)
+                };
+            }
         }
 
         """;

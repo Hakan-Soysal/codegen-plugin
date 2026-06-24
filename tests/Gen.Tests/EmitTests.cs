@@ -173,6 +173,21 @@ public class EmitTests
     }
 
     [Fact]
+    public void ResultHttp_exposes_override_hook_keeping_default_mapping()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "ResultHttp.g.cs"));
+            Assert.Contains("public static Func<object, IResult>? Override", f);   // özel hata zarfı seam
+            Assert.Contains("if (Override is { } custom) return custom(r!);", f);   // hook default'tan önce
+            Assert.Contains("Success<T> s => Results.Ok(s.Value)", f);             // default mapping korunur
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();

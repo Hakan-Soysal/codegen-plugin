@@ -24,7 +24,7 @@
   - `EntitiesFile` (L252): `public class {e.Id}` → `public partial class {e.Id}`.
   - Kabul: build yeşil; insan ayrı partial'da audit-kolon/soft-delete/computed/navigation ekleyebiliyor.
 
-- [ ] **P1.4 · `ResultHttp` override edilebilir (M)** — 🔴→🟢 özel hata zarfı (RFC7807)
+- [x] **P1.4 · `ResultHttp` override edilebilir (M)** — 🔴→🟢 özel hata zarfı (RFC7807)
   - `ResultHttp` (L208) `static class` kalır; üreteç-call-site (`MapLine`) değişmez.
   - Mekanizma (öneri, minimal): mutable static delegate hook —
     `public static Func<object, IResult>? Override;` ve `ToHttp<T>` başında `if (Override is {} o) return o(r!);` sonra mevcut switch.
