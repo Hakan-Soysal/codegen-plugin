@@ -60,6 +60,24 @@ public class EmitTests
     }
 
     [Fact]
+    public void Emitted_app_with_sqlite_provider_compiles()
+    {
+        var dir = TempDir();
+        try
+        {
+            var report = new BuildReport();
+            DotnetEmitter.Emit(Gm().Value, dir, report, new GenConfig("sqlite"));
+            Assert.Contains(report.Entries, e => e.Construct == "dbProvider"
+                && e.Id == "sqlite" && e.Status == Gen.Core.Report.ConstructStatus.Realized);
+
+            var (code, output) = Dotnet("build App.csproj -v q --nologo", dir);
+            Assert.True(code == 0, "sqlite-provider app derlenmedi:\n" + output);
+            Assert.DoesNotContain("warning CS8604", output);   // connstring config-by-reference null-uyarısı YOK
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Operation_file_has_request_record_and_partial_handler()
     {
         var dir = TempDir();

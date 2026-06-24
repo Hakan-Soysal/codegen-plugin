@@ -36,11 +36,11 @@
   - `GeneratedProps` config alır; provider → eşleşen `<PackageReference>` ekler. **Versiyonları doğrula (Context7).**
   - Kabul: provider=sqlite → props'ta Sqlite paketi; null → yalnız EFCore (mevcut).
 
-- [ ] **P2.4 · `Emit` `config` param + CLI wiring (M)**
+- [x] **P2.4 · `Emit` `config` param + CLI wiring (M)**
   - `Emit(gm, outDir, report, GenConfig? config = null)`; CLI manifest yanındaki `gen.config.json`'ı yükler (yoksa null) → Emit'e geçer.
   - Kabul: gen.config `{"dbProvider":"sqlite"}` ile emit → emit edilen app **gerçek `dotnet build` exit 0** (sqlite = en hafif, server gerektirmez) + determinizm (byte-aynı) + mevcut fixture (config'siz) golden değişmedi.
 
-- [ ] **▸ Checkpoint P2 (Complete):** tüm test yeşil + config'siz emit pre-P2 ile byte-aynı + sqlite-config app derleniyor + build-report provider'ı kaydediyor. → DB-provider gerçek parametre, tek knob, SPEC sınırları korundu.
+- [x] **▸ Checkpoint P2 (Complete):** tüm test yeşil + config'siz emit pre-P2 ile byte-aynı + sqlite-config app derleniyor + build-report provider'ı kaydediyor. → DB-provider gerçek parametre, tek knob, SPEC sınırları korundu.
 
 ## Kapsam dışı (gelecek)
 - Skill: hedef app analizi + config seed/reconcile (yok→onayla, farklı→bildir, aynı→geç) + output'a human-owned kopya.

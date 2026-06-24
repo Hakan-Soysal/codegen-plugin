@@ -11,8 +11,11 @@ var manifest = Loader.LoadManifest(manifestPath);
 var contract = Loader.LoadContract(manifestPath, manifest.Contract);
 var gm = GmBuilder.Build(manifest, contract);
 
+// manifest yanındaki gen.config.json (.NET üreteç parametreleri; yoksa null → mevcut davranış).
+var config = GenConfig.Load(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(manifestPath))!, "gen.config.json"));
+
 var report = new BuildReport();
-DotnetEmitter.Emit(gm, outDir, report);
+DotnetEmitter.Emit(gm, outDir, report, config);
 Completeness.Check(manifest, report);   // INV-7 gate: census ⊄ report → SilentDrop
 report.WriteTo(Path.Combine(outDir, "build-report.json"));
 
