@@ -85,6 +85,8 @@ public class EmitTests
             Assert.Contains("[Timestamp] public byte[] RowVersion", ent);   // concurrency optimistic
             var ctx = File.ReadAllText(Path.Combine(dir, "gen", "AppDbContext.g.cs"));
             Assert.Contains("public DbSet<App.Billing.Invoice> Invoices", ctx);
+            Assert.Contains("public partial class AppDbContext", ctx);                    // mapping seam
+            Assert.Contains("partial void OnModelCreatingPartial(ModelBuilder", ctx);
         }
         finally { Directory.Delete(dir, true); }
     }

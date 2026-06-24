@@ -648,9 +648,16 @@ public static class DotnetEmitter
 
             namespace {{Root}};
 
-            public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+            // partial + OnModelCreatingPartial: convention-dışı mapping (kolon tipi/index/tablo adı/ilişki)
+            // insan partial'ında yaşar; impl yokken partial void no-op (EF scaffolding konvansiyonu).
+            public partial class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
             {
-            {{sets}}}
+            {{sets}}
+                protected override void OnModelCreating(ModelBuilder modelBuilder)
+                    => OnModelCreatingPartial(modelBuilder);
+
+                partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+            }
 
             """;
     }

@@ -13,7 +13,7 @@
 
 ## Tasks
 
-- [ ] **P1.1 · `AppDbContext` partial + `OnModelCreatingPartial` hook (M)** — 🔴→🟢 tablo-mapping seam
+- [x] **P1.1 · `AppDbContext` partial + `OnModelCreatingPartial` hook (M)** — 🔴→🟢 tablo-mapping seam
   - `DbContextFile` (L640): `public class AppDbContext` → `public partial class AppDbContext`.
   - Gövdeye EF-scaffolding konvansiyonu ekle:
     `protected override void OnModelCreating(ModelBuilder b) { OnModelCreatingPartial(b); }`
