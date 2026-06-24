@@ -27,7 +27,7 @@
   - Gen.Dotnet'te `record GenConfig(string? DbProvider)` + dosyadan deserialize (System.Text.Json, mevcut `Json` infra).
   - Kabul: örnek `{"dbProvider":"sqlite"}` → DbProvider="sqlite"; dosya yok → null; bozuk JSON → net hata.
 
-- [ ] **P2.2 · Bootstrap config-by-reference provider emit (M)**
+- [x] **P2.2 · Bootstrap config-by-reference provider emit (M)**
   - `GeneratedBootstrap` config alır; whitelist → `(sp,o)=>o.Use{X}(...)`; null → mevcut boş lambda; bilinmeyen → `report.Unsupported("dbProvider", v, ...)` + boş lambda.
   - Mevcut `using Microsoft.EntityFrameworkCore;` UseX'leri kapsar; GetRequiredService/GetConnectionString Web SDK implicit-using.
   - Kabul: her provider string → doğru UseX satırı; null → byte-aynı; bilinmeyen → build-report unsupported.

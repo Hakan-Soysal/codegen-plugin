@@ -189,6 +189,49 @@ public class EmitTests
     }
 
     [Fact]
+    public void DbProvider_config_emits_config_by_reference_registration()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport(), new GenConfig("sqlite"));
+            var boot = File.ReadAllText(Path.Combine(dir, "gen", "Bootstrap.g.cs"));
+            Assert.Contains("AddDbContext<AppDbContext>((sp, o) => o.UseSqlite(", boot);
+            Assert.Contains("GetConnectionString(\"Default\")", boot);   // config-by-reference (sp→IConfiguration)
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Null_config_keeps_empty_provider_seam()
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm().Value, dir, new BuildReport());   // config null
+            var boot = File.ReadAllText(Path.Combine(dir, "gen", "Bootstrap.g.cs"));
+            Assert.Contains("AddDbContext<AppDbContext>(o => { /* ponytail: provider seam", boot);
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void Unknown_provider_recorded_unsupported_with_seam_fallback()
+    {
+        var dir = TempDir();
+        try
+        {
+            var report = new BuildReport();
+            DotnetEmitter.Emit(Gm().Value, dir, report, new GenConfig("mongodb"));
+            Assert.Contains(report.Entries, e => e.Construct == "dbProvider"
+                && e.Id == "mongodb" && e.Status == Gen.Core.Report.ConstructStatus.Unsupported);
+            var boot = File.ReadAllText(Path.Combine(dir, "gen", "Bootstrap.g.cs"));
+            Assert.Contains("AddDbContext<AppDbContext>(o => {", boot);   // güvenli seam fallback
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Logic_file_is_preserved_on_regeneration()
     {
         var dir = TempDir();

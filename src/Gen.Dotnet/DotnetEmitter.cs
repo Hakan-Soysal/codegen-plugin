@@ -14,7 +14,7 @@ public static class DotnetEmitter
 {
     const string Root = "App";
 
-    public static void Emit(GenerationModel gm, string outDir, BuildReport report)
+    public static void Emit(GenerationModel gm, string outDir, BuildReport report, GenConfig? config = null)
     {
         Directory.CreateDirectory(outDir);
         _written = new();                                    // bu run'da yazılan Generated dosyalar
@@ -119,7 +119,7 @@ public static class DotnetEmitter
             }
         }
 
-        WriteAlways(Path.Combine(gen, "Bootstrap.g.cs"), GeneratedBootstrap(gm));   // AddGenerated/MapGenerated
+        WriteAlways(Path.Combine(gen, "Bootstrap.g.cs"), GeneratedBootstrap(gm, config, report));   // AddGenerated/MapGenerated
         WriteIfAbsent(Path.Combine(outDir, "Program.cs"), ProgramShell());          // HumanShell: yoksa-üret
 
         WriteProvenanceAndPrune(outDir, prev);
@@ -1006,7 +1006,31 @@ public static class DotnetEmitter
     // Generated: AddGenerated/MapGenerated aggregator. İmzalar DONUK (yeni modül = sadece gövde değişir).
     // gm-düzeyi GLOBAL kayıtlar burada (tek AppDbContext, IEventBus, IIdempotencyStore, external/uncharted
     // client, subscription consumer) — per-module Wiring'e DEĞİL.
-    static string GeneratedBootstrap(GenerationModel gm)
+    // dbProvider whitelist → AddDbContext kaydı. null → seam (mevcut); bilinmeyen → unsupported + seam.
+    // config-by-reference: (sp,o) → IConfiguration; AddGenerated imzası değişmez (Program.cs shell korunur).
+    static string DbContextRegistration(string? provider, BuildReport report)
+    {
+        const string seam = "        services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n";
+        if (provider is null) return seam;
+        const string conn = "sp.GetRequiredService<IConfiguration>().GetConnectionString(\"Default\")";
+        string call = provider switch
+        {
+            "postgres" => $"UseNpgsql({conn})",
+            "sqlite" => $"UseSqlite({conn})",
+            "sqlserver" => $"UseSqlServer({conn})",
+            "inmemory" => "UseInMemoryDatabase(\"AppDb\")",
+            _ => ""
+        };
+        if (call.Length == 0)
+        {
+            report.Unsupported("dbProvider", provider, "whitelist dışı; postgres/sqlite/sqlserver/inmemory");
+            return seam;
+        }
+        report.Realized("dbProvider", provider);
+        return $"        services.AddDbContext<AppDbContext>((sp, o) => o.{call});\n";
+    }
+
+    static string GeneratedBootstrap(GenerationModel gm, GenConfig? config, BuildReport report)
     {
         var sb = new StringBuilder();
         if (gm.Entities.Count > 0) sb.Append("using Microsoft.EntityFrameworkCore;\n");
@@ -1015,7 +1039,7 @@ public static class DotnetEmitter
 
         sb.Append("    public static IServiceCollection AddGenerated(this IServiceCollection services)\n    {\n");
         if (gm.Entities.Count > 0)
-            sb.Append("        services.AddDbContext<AppDbContext>(o => { /* ponytail: provider seam — o.UseNpgsql(...) vb. */ });\n");
+            sb.Append(DbContextRegistration(config?.DbProvider, report));
         if (gm.Events.Count > 0)
             sb.Append("        services.AddScoped<IEventBus, OutboxEventBus>();\n");
         foreach (var ext in gm.Externals)
