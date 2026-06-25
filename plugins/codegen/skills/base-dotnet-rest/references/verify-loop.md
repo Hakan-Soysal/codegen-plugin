@@ -27,10 +27,38 @@ PASS/FAIL'ine bırakılır.
 
 ---
 
+## 0.5 Kapı 0 — Access-coverage (deterministik post-fill ön-denetim, build-ÖNCESİ)  [garanti]
+
+> **Amaç (access-divergence bug'ını mekanik garanti altına al):** Bir op'un dokunması GEREKEN entity'ler
+> `manifest.json operations[].access.{creates,updates,deletes}`'tedir (tech-resolved zorunlu yazma-etki
+> kümesi). Gen yüzeyi (Validation_N/Rule_N/RequiredRoles/clients…) bu **per-entity persist kümesini
+> taşımaz** — persistence seam'in elle-yazılan işidir, dolayısıyla onu doğrulayan tek nokta budur.
+
+**Denetim (deterministik, grep'lenebilir — LLM-judge DEĞİL):** seam gövdesi (`{op}*.Logic.cs`) yazıldıktan
+sonra, `manifest.access.{creates,updates,deletes}`'teki **HER** entity için gövdede bir persist/mutate
+çağrısı (ör. `Add`/`Update`/`Remove` + `SaveChanges`, ya da o entity'nin repository/DbSet mutasyonu)
+bulunmalı. **Kaynak `manifest.json`** — `operations.json access` (`{reads,writes}`) DEĞİL.
+
+**Karar:**
+- `entities_persisted(seam)` ⊇ `manifest.access.{creates,updates,deletes}` → **PASS** → Kapı 1'e geç.
+- Eksik entity (manifest zorunlu-yazma diyor ama gövde persist etmiyor) → **FAIL**: gövde büyük olasılıkla
+  `operations.json`'un **dar** access'ini referans aldı (access-divergence). Düzelt — eksik entity'yi
+  manifest-authority'ye göre persist et —, tekrar koş. (PoC: `OlusturRandevu` gövdesi `Appointment`+`Session`
+  yazıp `Package` hak-rezervini atladı; manifest `updates:[Session,Package]` diyordu → Kapı 0 FAIL.)
+
+> **Tripwire (mnemonic):** okuduğun `access` nesnesinde `writes` anahtarı varsa → `operations.json`
+> (business, dar) → YANLIŞ kaynak; `manifest.json`'un 4-anahtarlı `{reads,creates,updates,deletes}`'ine dön.
+> Bu yalnız erken-uyarıdır; **garanti Kapı 0'ın küme-kapsama denetimidir** (raw nesneye bakmaya bağlı değil).
+
+Kapı 0 PASS olmadan build/conformance'a geçme; access-coverage **gerekli ama yetersiz** değil — manifest
+yazma-etki kümesinin tam kapsanmasının deterministik garantisidir (davranışsal doğruluk yine Kapı 2'de).
+
+---
+
 ## 1. İki-kapılı oracle  [§B.5]
 
-Her doldurulan seam **iki kapıdan** geçer. Birincisi geçmeden ikinciye geçilmez; her ikisi de
-geçmeden seam "bitti" SAYILMAZ.
+Her doldurulan seam — Kapı 0 (access-coverage, §0.5) geçtikten sonra — **iki kapıdan** geçer. Birincisi
+geçmeden ikinciye geçilmez; her ikisi de (+ Kapı 0) geçmeden seam "bitti" SAYILMAZ.
 
 ### Kapı 1 — Birincil: BUILD (zorunlu, ama yetersiz)
 

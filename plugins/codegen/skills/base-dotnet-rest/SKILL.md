@@ -94,6 +94,14 @@ davranışsal kapsanıyor mu"**. Üç değişmez tüm tasarımı dayatır:
 - **Onaylanmamış/üretilmiş katı kabul etmeden doldurma.** Statik kat eksikse (gen yok) DUR —
   statik üretim senin işin değil (generator binary'si; K5 fold = filler binary'yi çağırır, ama
   doldurma akışı üretilmiş gen'i varsayar).
+- **Access/effect yüzeyinin TEK kaynağı = `manifest.json` (tech-resolved).** Bir op'un dokunduğu
+  entity kümesi (persist/effect) **yalnız** `manifest.json operations[].access.{reads,creates,updates,
+  deletes}`'ten alınır (tech-resolved, geniş — cascade effect'leri içerir). `operations.json` `access`
+  (`{reads,writes}`, business intent) effect-surface kaynağı **DEĞİL** — yalnız iş-niyeti/açıklama; dardır
+  (cascade rezervleri (ör. hak/kontenjan → `Package`) eksik olabilir). **Mekanik tripwire:** okuduğun
+  `access` nesnesinde `writes` anahtarı varsa → `operations.json`'dasın (YANLIŞ kaynak) → `manifest`'in
+  4-anahtarlı access'ine dön. (PoC hatası: seam `operations.json`'un dar access'ini referans alıp
+  `Package` yazma-etkisini atladı → access-divergence. Faz 5 access-coverage kapısı bunu mekanik yakalar.)
 
 ---
 
@@ -168,6 +176,11 @@ diye GAP sayma → o post-gen Faz 3'ün işi.
   `I{External}` client).
 - **`realizes` link → niyet.** Seam'in `realizes`'ı üzerinden `operations.json`/`manifest.json`
   iş niyetini bağla (bu op ne yapmalı, hangi construct'ları taşıyor).
+- **Access/effect entity kümesi → yalnız `manifest.json`.** Op'un persist/effect yüzeyi =
+  `manifest.json operations[].access.{reads,creates,updates,deletes}` (tech-resolved, geniş).
+  `operations.json access` (`{reads,writes}`, business) **kaynak değildir** — dar; cascade rezervlerini
+  (ör. `Package` hak/kontenjan) içermeyebilir. Shape tripwire: `writes` anahtarı = operations.json =
+  yanlış kaynak. Bu küme Faz 5 access-coverage kapısının zorunlu-yazma referansıdır.
 - **`build-report` policy/construct.** `build-report.policies` (consistency-mode, dedup-store,
   saga-orchestration-state…) + `build-report.constructs[].status` → seam'i değiştiren parametrik
   bağlam. Görmezsen "derlenir ama yanlış profil" riski.
@@ -249,6 +262,11 @@ Doldurma-öncesi dört denetim (K1–K4); geçmeyen → **GAP → STOP** (Faz 4'
 
 **Amaç:** Her doldurulan seam'i doğrula — "derlendi" yetmez (build-pass contract-sadakatini
 söylemez; reward-hacking riski).
+- **Kapı 0 (deterministik, post-fill, build-ÖNCESİ — access-coverage GARANTİSİ):** gövde,
+  `manifest.json operations[].access.{creates,updates,deletes}`'teki **HER** entity için bir
+  persist/mutate çağrısı içermeli (`entities_persisted(seam) ⊇ manifest-yazma-kümesi`). Eksik → **FAIL**
+  (muhtemelen `operations.json`'un dar access'i referans alındı = access-divergence) → düzelt, tekrar koş.
+  Kaynak **yalnız manifest**; `operations.json access` (`{reads,writes}`) DEĞİL. Mekanik: `references/verify-loop.md` §0.5.
 - **Birincil (zorunlu):** `descriptor.build.command` → exit 0.
 - **İkincil (conformance):** deterministik oracle (gerçek execution+assert; LLM-judge ASLA) —
   throws→negatif, invariant→property, validation/rule→sınır, idempotent→replay, saga→
