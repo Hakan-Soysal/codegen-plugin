@@ -7,7 +7,7 @@
   },
   "invocation": {
     "type": "cli",
-    "entry": "techgen",
+    "entry": "dotnet ${CLAUDE_SKILL_DIR}/techgen/Gen.Cli.dll",
     "args": ["manifest", "targetDir", "config"]
   },
   "capability": {
@@ -101,7 +101,7 @@
     "success": "exit 0"
   },
   "conformance": {
-    "adapter": "CoreTemplate1/conformance-adapter",
-    "run": "CONFORMANCE_APP=<App.dll> CONFORMANCE_SPECS=<specs-dir> dotnet test CoreTemplate1/conformance-adapter/ConformanceAdapter.csproj -c Debug"
+    "adapter": "${CLAUDE_SKILL_DIR}/conformance",
+    "run": "dotnet ${CLAUDE_SKILL_DIR}/conformance/Conformance.dll {appDll} {specsPath}"
   }
 }

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>Conformance</AssemblyName>
+    <RootNamespace>ConformanceAdapter</RootNamespace>
+    <!-- Bundled, framework-dependent console runner. Run via `dotnet Conformance.dll <appDll> <specsPath>`
+         on the user's installed .NET runtime — no SDK build, no clone (mirrors techgen/). -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Generated app emitted by Gen.Dotnet pulls Microsoft.AspNetCore.App + EF at type-load.
+         The runner loads App.dll at runtime (AssemblyDependencyResolver), so the host must have
+         the ASP.NET shared framework available. DI + System.Text.Json are in the shared framework
+         too, so NO PackageReferences are needed → framework-dependent publish stays tiny. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The acceptance tests (Tests/**) are a SEPARATE xUnit project; exclude them from the console
+         build so the runner does NOT pull in xUnit / Gen.Core / Gen.Dotnet. -->
+    <Compile Remove="Tests/**/*.cs" />
+  </ItemGroup>
+
+</Project>

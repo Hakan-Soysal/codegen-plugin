@@ -55,20 +55,19 @@ geçmeden seam "bitti" SAYILMAZ.
 - **LLM-judge ASLA.** Conformance, LLM'in "seam doğru görünüyor mu" yargısı DEĞİLDİR; deterministik
   bir testin PASS/FAIL'idir. Aynı seam + aynı spec → aynı sonuç.
 
-#### `conformance.run` — somut çağrı (descriptor'dan, T4.4 adapter)
+#### `conformance.run` — somut çağrı (descriptor'dan; skill'e gömülü console runner)
 
-Aile, N adet dil-nötr SPEC JSON'unu + built app yolunu çevre değişkenleriyle adapter'a besler; runner
-gerçekten bu değişkenleri okur:
+Conformance runner skill bundle'ında **gömülü** gelir (`${CLAUDE_SKILL_DIR}/conformance/`) — kurulum
+dışında klon/build/install GEREKMEZ, kullanıcının .NET runtime'ıyla koşar (jeneratör `techgen/` ile
+simetrik). Çağrı (descriptor `conformance.run`):
 
 ```
-CONFORMANCE_APP=<built App.dll yolu (test edilen üretilmiş app)> \
-CONFORMANCE_SPECS=<ailenin nötr spec JSON dizini (*.json, T3.3 çıktısı)> \
-dotnet test CoreTemplate1/conformance-adapter/ConformanceAdapter.csproj -c Debug
+dotnet ${CLAUDE_SKILL_DIR}/conformance/Conformance.dll <built App.dll yolu> <ailenin nötr spec JSON dizini/dosyası (T3.3 çıktısı)>
 ```
 
-Entrypoint `CONFORMANCE_SPECS/**/*.json`'u enumerate eder, `CONFORMANCE_APP`'i `GeneratedApp` ile
-yükler, her spec'i `SpecRunner`'dan geçirir; herhangi bir spec `IsFail` ise **koşum FAIL**. (İki env
-değişkeni yoksa entrypoint SKIP'ler — düz `dotnet test` kendi acceptance suite'ini koşar.)
+Runner spec'leri enumerate eder, `App.dll`'i `GeneratedApp` (AssemblyLoadContext) ile yükler, her spec'i
+`SpecRunner`'dan geçirir, her spec için PASS/FAIL yazdırır. **Çıkış kodu: 0 = tüm spec PASS; ≠0 = FAIL**
+(1 = en az bir spec `IsFail`; 2 = yükleme/argüman hatası). Loop için: **nonzero ⟹ conformance FAIL**.
 
 > **Görev bölümü (A3):** SPEC = **aile** (T3.3, assertion contract-türevli); ADAPTER = **paket**
 > (T4.4, "op çağır + Result incele" harness'ı); koşum + doğrulama = aile. Filler bu loop'ta yalnız
@@ -138,10 +137,11 @@ olduğundan paket onu gizleyemez (A3) — icat edilmiş davranış conformance't
 > `IsFail`; FAIL nedeni gözlenen `ServerError`'ın beklenen `NotProcessable`'la uyuşmaması.
 > Aynı koşumda validation spec'i hâlâ PASS (yanlış-seam yalnız dup kolunu bozdu → runner seçici).
 >
-> **Bu test gerçekten koşuldu:** `dotnet test CoreTemplate1/conformance-adapter/ConformanceAdapter.csproj
-> -c Debug` → **Passed: 3, Skipped: 1** (golden 6.2 + negatif 6.3 + invariant property geçti; env-tahrikli
-> entrypoint SKIP). Yani icat-seam'in build0 olmasına rağmen conformance'tan düştüğü **empirik
-> doğrulandı** — bu loop'un "build gerekli ama yetersiz" değişmezinin somut kanıtı.
+> **Bu test gerçekten koşuldu:** bundled runner `dotnet ${CLAUDE_SKILL_DIR}/conformance/Conformance.dll
+> <App.dll> <specs>` → doğru-seam: 2 pass, **exit 0**; yanlış-seam (ServerError): throws spec FAIL
+> (beklenen `NotProcessable` ≠ gözlenen `ServerError`), **exit 1** (validation hâlâ PASS → runner seçici).
+> Yani icat-seam'in build0 olmasına rağmen conformance'tan düştüğü **empirik doğrulandı** — "build gerekli
+> ama yetersiz" değişmezinin somut kanıtı. (Runner'ın kendi acceptance suite'i ayrıca 3/3 geçer.)
 
 ---
 
@@ -165,8 +165,8 @@ olduğundan paket onu gizleyemez (A3) — icat edilmiş davranış conformance't
 
 - **Conformance SPEC yazma** (construct → spec eşleme, assertion contract-türevliği) → **T3.3**
   (`kesif/.../conformance-spec.md`).
-- **Conformance ADAPTER yazma** (`GeneratedApp`/`SpecRunner`/`conformance.run` harness'ı) → **T4.4**
-  (`CoreTemplate1/conformance-adapter/`).
+- **Conformance ADAPTER yazma** (`GeneratedApp`/`SpecRunner` console runner'ı) → **T4.4** (kaynak
+  `conformance-adapter/`, skill'e gömülü `${CLAUDE_SKILL_DIR}/conformance/`). Filler yalnız `conformance.run`'ı koşar.
 - **Gap çözme** (retry-bitince DUR/sor/kayıt) → **T5.2** (`gap-protocol.md` §B.4.3). Bu dosya yalnız
   retry-exhausted → gap **devrini** tanımlar.
 - **Aile kapısı** (paket-bağımsız yeniden-doğrulama, K1/K2 contract-vs-yüzey + conformance koşumu) →

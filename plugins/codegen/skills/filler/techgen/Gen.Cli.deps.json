@@ -1,0 +1,56 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Gen.Cli/0.2.0": {
+        "dependencies": {
+          "Gen.Core": "1.0.0",
+          "Gen.Dotnet": "0.2.0"
+        },
+        "runtime": {
+          "Gen.Cli.dll": {}
+        }
+      },
+      "Gen.Core/1.0.0": {
+        "runtime": {
+          "Gen.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Gen.Dotnet/0.2.0": {
+        "dependencies": {
+          "Gen.Core": "1.0.0"
+        },
+        "runtime": {
+          "Gen.Dotnet.dll": {
+            "assemblyVersion": "0.2.0.0",
+            "fileVersion": "0.2.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Gen.Cli/0.2.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Gen.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Gen.Dotnet/0.2.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

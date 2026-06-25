@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>ConformanceAdapter.Tests</RootNamespace>
+    <!-- Generated app loaded at runtime needs the ASP.NET shared framework (same as the console runner). -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Exercises SpecRunner directly (verifies the runner itself). References the console project for
+       SpecRunner/Spec/GeneratedApp, and Gen.Core/Gen.Dotnet ONLY for the test fixture (AppFixture)
+       that emits a throwaway generated app. SpecRunner itself does NOT depend on Gen.*. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Conformance.csproj" />
+    <ProjectReference Include="..\..\src\Gen.Core\Gen.Core.csproj" />
+    <ProjectReference Include="..\..\src\Gen.Dotnet\Gen.Dotnet.csproj" />
+  </ItemGroup>
+
+</Project>

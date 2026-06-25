@@ -16,10 +16,12 @@ public static class AppFixture
 {
     static string FixturesDir()
     {
-        // ..\..\tests\fixtures (bin/Debug/net10.0'dan adapter köküne çık)
+        // Test projesi konumu: conformance-adapter/Tests/ → bin/Debug/net10.0.
+        // 3x ".." ile Tests proje köküne, +1 ".." ile conformance-adapter köküne, +1 ".." ile repo köküne çık.
         var asmDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-        var adapterRoot = Path.GetFullPath(Path.Combine(asmDir, "..", "..", ".."));
-        return Path.GetFullPath(Path.Combine(adapterRoot, "..", "tests", "fixtures"));
+        var testsRoot = Path.GetFullPath(Path.Combine(asmDir, "..", "..", ".."));
+        var repoRoot = Path.GetFullPath(Path.Combine(testsRoot, "..", ".."));
+        return Path.GetFullPath(Path.Combine(repoRoot, "tests", "fixtures"));
     }
 
     public static string TempDir()
