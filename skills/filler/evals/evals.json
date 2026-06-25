@@ -1,0 +1,26 @@
+{
+  "skill_name": "filler",
+  "evals": [
+    {
+      "id": 1,
+      "name": "command-saga-idem-inplace-fill-build0-conformance",
+      "prompt": "Statik üretilmiş bir .NET projem hazır (gen/** emit edildi, build-report + operations.json/manifest.json + gen.config.json + targetDir devredildi). CreateInvoice operasyonunun BOŞ insan-seam'ini doldur. Request *Command, .Idem.g.cs var ve boundary'de '// saga:' compensate kenarı var; tüm predicate-input'lar request-param / entity-field / boundary-dönüş'e bağlanabiliyor, her failable adlı-hataya eşli.",
+      "expected_output": "describe DEĞİL → 6-faz doldurma akışı. Faz1 bağlam-derleme: CreateInvoice prefix → CreateInvoiceHandler.g.cs + .Idem.g.cs + saga client (ör. IPaymentGateway), realizes → operations.json niyeti, build-report.policies (saga-orchestration-state, dedup-store). Faz2 arketip: *Command + .Idem.g.cs + boundary '// saga:' → Command + saga + idempotent (üç imza birden). Faz3 gap-gate (K1–K4): K1 tüm input'lar dört kaynaktan birine bağlı ✓, K2 her failable adlı-hataya eşli ✓, K3 saga client DI'da ✓, K4 unsupported değmiyor ✓ → gap YOK, Faz4'e geç. Faz4 in-place fill: gövde kanonik sırada (idempotency TryBeginAsync → authz → Validation_N → external-input → Rule_N → entity+Invariant_N → persist → saga dış-çağrı + hata→ters-sıra compensate → emit → Result<T>) CreateInvoiceHandler.Logic.cs human-seam'ine yazılır (WriteIfAbsent, 'doldurulacak' marker'lı seam'e); gen/** dokunulmaz. Faz5 verify-loop iki kapı: Kapı1 dotnet build exit 0 (zorunlu), Kapı2 conformance deterministik oracle PASS (idempotent→replay dedup, saga→failure-injection+compensate, throws→tipli-hata negatif, validation→sınır, invariant→property; LLM-judge ASLA). HER İKİ kapı geçer → seam 'bitti', retry'a gerek yok (1 iterasyon). Faz6 rapor: doldurulan seam + arketip + kanonik sıra + gate sonuçları (K1–K4 geçti) + build exit 0 + conformance PASS. Beklenen sonuç: BUILD0 + CONFORMANCE PASS.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "bilinmeyen-gap-kredi-limiti-boundary-yok-DUR-sor",
+      "prompt": "Statik üretilmiş projede bir op'un seam'ini dolduracağım. Bir Rule_N predicate'i 'creditLimit' input alanı istiyor; ama ortada kredi-limiti boundary'si YOK, bu alan request-param da değil, entity-field de değil, hiçbir boundary'nin dönüşü de değil, build-report.policies içinde de yok. Üretimi başlat.",
+      "expected_output": "DUR + kullanıcıya sor (improvise YASAK — bilinmeyen gap). Faz3 gap-gate K1 (predicate-input bağlanabilirliği): 'creditLimit' alanı K1'in DÖRT kaynağının (request-param / entity-field / boundary-dönüş / build-report.policy) hiçbirine bağlanamıyor → K1 GAP. Çözüm kademesi yukarıdan taranır: rung-1 üreteç-policy YOK (build-report.policies'te eşleşme yok), rung-2 kayıtlı çözüm YOK, rung-3 unsupported (K4) DEĞMİYOR → rung-4: BİLİNMEYEN GAP. Faz4b: DUR — gövde YAZILMAZ (CreateInvoice/op'un .Logic.cs'i boş kalır); gap'i yorumla işaretleyip devam etmek YASAK ('Yorum ≠ STOP'). Gap KESİN sunulur: contract ne diyor (hangi rule, hangi predicate), ne eksik ('K1: creditLimit alanı dört kaynağın hiçbirine bağlanamıyor'), neden sadık ilerlenemez (improvise = uydurma). Kullanıcıdan TANIM+EYLEM alınır (use-generator-policy:X / inject-human-interface / map-to-error:Y / back-to-teknik-analiz); tekrar-edilebilirse registry kaydı ÖNERİLİR (onay = gelecek otomatik-uygulama rızası). ASLA: 'makul varsayım' / 'decimal varsay' / tip-uydur / yorumla geç. expected_output = DUR (improvise DEĞİL).",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "bilinen-gap-dedup-store-in-memory-otomatik-cozum-rung1",
+      "prompt": "Statik üretilmiş projede bir op'un seam'ini dolduracağım. Bir Validation_N/Rule_N input'u bir 'store'a (dedup deposu) bağlanmayı soruyor. build-report.policies içinde 'dedup-store: in-memory' policy'si tanımlı. Üretimi başlat.",
+      "expected_output": "Otomatik çözüm (ladder rung-1) — DUR YOK, improvise YOK. Faz3 gap-gate K1 input'un store'a bağlanmasını sorar → bir gap sinyali. Çözüm kademesi yukarıdan taranır: rung-1 üreteç-policy → build-report.policies.dedup-store == 'in-memory' EŞLEŞİR. Bu üretecin tanımlı yöntemidir, bilinmeyen gap DEĞİLDİR. Rung-1 OTOMATİK uygulanır: 'mevcut in-memory store'u kullan' kararı verilir, gövde o store'a bağlanarak yazılır (DUR olmaz, alt rung'lara bakılmaz — ilk eşleşen kazanır). Karar RAPORA YAZILIR (sessiz değil): Faz6'da 'rung-1 (üreteç-policy): dedup-store: in-memory → mevcut store'. Sonra Faz5 verify-loop normal koşar (build exit 0 + conformance PASS). Bu senaryo 'tanımlı yöntem varsa onu kullan' ilkesinin pozitif kanıtıdır; bilinmeyen gap olmadığı için kullanıcıya SORULMAZ.",
+      "files": []
+    }
+  ]
+}

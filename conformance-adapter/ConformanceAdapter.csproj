@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Generated app emitted by Gen.Dotnet pulls Microsoft.AspNetCore.App + EF at type-load.
+         The adapter loads App.dll at runtime (AssemblyDependencyResolver), so the test host
+         must have the ASP.NET shared framework available. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Gen.Core / Gen.Dotnet are referenced ONLY by the test fixture (AppFixture) to EMIT a
+       generated app to exercise the runner against. SpecRunner itself does NOT depend on them:
+       it consumes an already-built assembly path + spec JSON list (matches how T1.3 / the family
+       invoke it against a real generated app). -->
+  <ItemGroup>
+    <ProjectReference Include="..\src\Gen.Core\Gen.Core.csproj" />
+    <ProjectReference Include="..\src\Gen.Dotnet\Gen.Dotnet.csproj" />
+  </ItemGroup>
+
+</Project>

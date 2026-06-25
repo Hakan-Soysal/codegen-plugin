@@ -1,0 +1,107 @@
+{
+  "id": "techgen-dotnet",
+  "version": "0.2.0",
+  "source": {
+    "marketplace": "vennyx/command-dsl",
+    "install": "/plugin install command-dsl@vennyx/command-dsl"
+  },
+  "invocation": {
+    "type": "cli",
+    "entry": "techgen",
+    "args": ["manifest", "targetDir", "config"]
+  },
+  "capability": {
+    "languages": ["csharp"],
+    "architectures": ["modular-monolith", "vertical-slice"],
+    "persistence": ["postgres", "sqlite", "sqlserver", "inmemory"],
+    "transports": ["rest"],
+    "constructsCovered": [
+      "deployable",
+      "module",
+      "operation",
+      "entity",
+      "type",
+      "error",
+      "event",
+      "subscription",
+      "external",
+      "uncharted",
+      "boundary-op",
+      "calls",
+      "visibility",
+      "serving",
+      "roles",
+      "ownership",
+      "scopes",
+      "validation",
+      "rule",
+      "note",
+      "consistency",
+      "permit",
+      "guardRef",
+      "throws",
+      "idempotent",
+      "emits",
+      "pagination",
+      "invariant",
+      "compensate",
+      "sourceOfTruth",
+      "concurrency",
+      "ext"
+    ]
+  },
+  "emissionContract": {
+    "seamPath": [
+      "src/{Module}/{op}Handler.Logic.cs",
+      "src/Boundary/{Ext}Client.Logic.cs",
+      "src/{Module}/{op}{Trigger}Trigger.Logic.cs",
+      "src/{ConsumerModule}/{Event}To{Op}Consumer.Logic.cs"
+    ],
+    "emptyStubMarker": "doldurulacak",
+    "ownedTree": "gen/**",
+    "humanTree": ["src/**", "Program.cs", "App.csproj"],
+    "handlerSurfaceMap": {
+      "operation": "{op}Handler.ExecuteAsync(request, ct) : Task<Result<T>>",
+      "validation": "Validation_N",
+      "rule": "Rule_N",
+      "invariant": "{Entity}Invariants.Invariant_N",
+      "throwsFactory": "{op}Handler.{ErrorId}(...) : Result<T>",
+      "throwsCatalog": "{op}Handler.ThrowableErrors",
+      "auth": ["RequiredRoles", "RequiredScopes", "Ownership"],
+      "idempotent": "IdempotencyKeys",
+      "boundary": "{Ext}Client.{op}(...) : Task<T>",
+      "boundaryValidation": "{Ext}{op}Validation.Validation_N",
+      "subscription": "{Event}To{Op}Consumer.HandleAsync(@event, ct) : Task",
+      "trigger": "{op}{Trigger}Trigger.StartAsync(ct) : Task",
+      "pagination": ["PaginationStrategy", "DefaultPageSize"],
+      "consistency": ["ConsistencyRisk", "ConsistencyMode"],
+      "resultTaxonomy": ["Success", "NotAuthenticated", "NotAuthorized", "NotValid", "NotProcessable", "ServerError"]
+    },
+    "canonicalOrder": [
+      "idempotency",
+      "authz",
+      "validation",
+      "external-input",
+      "rule",
+      "entity+invariant",
+      "persist",
+      "emit",
+      "return"
+    ],
+    "buildReportSchema": {
+      "constructs": "[{construct, id, status}] (status: realized | unsupported)",
+      "policies": "{name: decision}"
+    }
+  },
+  "gapProtocol": {
+    "compliant": true
+  },
+  "build": {
+    "command": "dotnet build {targetDir}/App.csproj",
+    "success": "exit 0"
+  },
+  "conformance": {
+    "adapter": "CoreTemplate1/conformance-adapter",
+    "run": "CONFORMANCE_APP=<App.dll> CONFORMANCE_SPECS=<specs-dir> dotnet test CoreTemplate1/conformance-adapter/ConformanceAdapter.csproj -c Debug"
+  }
+}

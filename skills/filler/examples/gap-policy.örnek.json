@@ -1,0 +1,24 @@
+{
+  "gap-signature": {
+    "archetype": "Command",
+    "kural": "K1",
+    "tetik": "rule-input-unbindable:credit-limit"
+  },
+  "resolution": {
+    "method": "inject-human-interface",
+    "params": {
+      "boundary": "ICreditLimitProvider",
+      "returns": "decimal",
+      "binds": "creditLimit"
+    },
+    "template": "creditLimit = await _creditLimitProvider.GetLimitAsync(customerId);"
+  },
+  "scope": {
+    "package": "techgen-dotnet@0.2.0"
+  },
+  "provenance": {
+    "taught-by": "user",
+    "date": "2026-06-25",
+    "repeatable": true
+  }
+}
