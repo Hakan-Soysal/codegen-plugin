@@ -34,12 +34,30 @@ public static class DotnetEmitter
         if (gm.Entities.Count > 0) WriteAlways(Path.Combine(gen, "AppDbContext.g.cs"), DbContextFile(gm));
         if (gm.Events.Count > 0) WriteAlways(Path.Combine(gen, "EventBus.g.cs"), EventBus());
         foreach (var ev in gm.Events) report.Realized("event", ev.Id);
-        if (gm.Subscriptions.Count > 0) WriteAlways(Path.Combine(gen, "Subscriptions.g.cs"), SubscriptionsFile(gm, report));   // D3
+        if (gm.Subscriptions.Count > 0)
+        {
+            WriteAlways(Path.Combine(gen, "Subscriptions.g.cs"), SubscriptionsFile(gm, report));   // D3
+            // subscription human-seam: HandleAsync gövdesi (gen değil) → src/{Consumer.Module}/{cls}.Logic.cs (WriteIfAbsent, ezilmez).
+            foreach (var s in gm.Subscriptions)
+            {
+                var subDir = Path.Combine(src, s.Consumer.Module);
+                Directory.CreateDirectory(subDir);
+                WriteIfAbsent(Path.Combine(subDir, $"{s.Event.Name}To{s.Consumer.Op}Consumer.Logic.cs"), SubscriptionLogic(s));
+            }
+        }
 
         if (gm.Deployables.Count > 0)
             WriteAlways(Path.Combine(gen, "Host.g.cs"), HostFile(gm, report));            // B3 (modular-monolith host)
         if (gm.Externals.Count > 0 || gm.CallEdges.Count > 0)
             WriteAlways(Path.Combine(gen, "Boundary.g.cs"), BoundaryFile(gm, report));   // Task 18+21
+        // boundary human-seam: I{Ext} impl (gen değil) → src/Boundary/{Ext}Client.Logic.cs (WriteIfAbsent, ezilmez).
+        if (gm.Externals.Count > 0)
+        {
+            var boundaryDir = Path.Combine(src, "Boundary");
+            Directory.CreateDirectory(boundaryDir);
+            foreach (var ext in gm.Externals)
+                WriteIfAbsent(Path.Combine(boundaryDir, $"{ext.Name}Client.Logic.cs"), BoundaryClientLogic(ext));
+        }
         if (gm.Uncharted.Count > 0)
         {
             Directory.CreateDirectory(Path.Combine(gen, "Uncharted"));
@@ -98,7 +116,14 @@ public static class DotnetEmitter
                 var ext = ExtPartial(module.Name, op, report);
                 if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
                 var trigger = TriggerPartial(module.Name, op, report);
-                if (trigger is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Trigger.g.cs"), trigger);
+                if (trigger is not null)
+                {
+                    WriteAlways(Path.Combine(dir, $"{op.Id}.Trigger.g.cs"), trigger);
+                    // trigger gövdesi human-seam: src/{Module}/{op}{T}Trigger.Logic.cs (WriteIfAbsent, ezilmez, marker).
+                    Directory.CreateDirectory(humanDir);
+                    foreach (var t in op.Op.Ext!.Where(e => e.Ns == "trigger"))
+                        WriteIfAbsent(Path.Combine(humanDir, $"{op.Id}{Naming.Pascal(t.Name)}Trigger.Logic.cs"), TriggerLogic(module.Name, op, t));
+                }
                 var throws = ThrowsPartial(module.Name, op, gm, report);
                 if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
                 var consistency = ConsistencyPartial(module.Name, op, report);
@@ -422,9 +447,8 @@ public static class DotnetEmitter
             sb.Append($"public interface I{ext.Name}\n{{\n");
             foreach (var b in ext.Operations) { report.Realized("boundary-op", $"{ext.Name}.{b.Id}"); sb.Append($"    {Sig(b)};\n"); }
             sb.Append("}\n\n");
-            sb.Append($"public class {ext.Name}Client : I{ext.Name}\n{{\n");   // unsealed: insan stub'ı extend edebilir
-            foreach (var b in ext.Operations) sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{ext.Name}.{b.Id}\");\n");
-            sb.Append("}\n\n");
+            // {Ext}Client (I{Ext} impl) ARTIK gen'de DEĞİL: human-seam src/Boundary/{Ext}Client.Logic.cs
+            // (WriteIfAbsent, ezilmez, marker). A2: tüm seam noktaları handler-gövdesiyle aynı desende.
             // boundary serving (external'ın protokol-maruziyeti; çağıran-tarafı için metadata) + caller-side validation (INV-4).
             foreach (var b in ext.Operations)
             {
@@ -448,6 +472,25 @@ public static class DotnetEmitter
                 sb.Append($"// ponytail: committed-adımları izle; hata → ters-sıra {ce.Compensate.Op} çağır (orchestration-state seam).\n\n");
             }
         }
+        return sb.ToString();
+    }
+
+    // boundary human-seam: I{Ext}'i implemente eden {Ext}Client (src/Boundary/, WriteIfAbsent, ezilmez, marker).
+    // namespace {Root} → I{Ext} ile aynı; DI (AddSingleton<I{Ext},{Ext}Client>) using'siz çözülür.
+    static string BoundaryClientLogic(ExternalJson ext)
+    {
+        string Sig(BoundaryOpJson b)
+        {
+            var ps = string.Join(", ", b.Signature.Params.Select(p => $"{Naming.Type(p.Type, p.Collection)} {p.Name}"));
+            var comma = b.Signature.Params.Count > 0 ? ", " : "";
+            return $"Task<{Naming.Type(b.Signature.Returns, false)}> {Naming.Pascal(b.Id)}({ps}{comma}CancellationToken ct = default)";
+        }
+        var sb = new StringBuilder($"namespace {Root};\n\n");
+        sb.Append($"// {ext.Name} dış-adapter (transport impl) — insan/LLM doldurur. gen ezmez (WriteIfAbsent).\n");
+        sb.Append($"public class {ext.Name}Client : I{ext.Name}\n{{\n");
+        foreach (var b in ext.Operations)
+            sb.Append($"    public {Sig(b)} => throw new NotImplementedException(\"{ext.Name}.{b.Id}: doldurulacak\");\n");
+        sb.Append("}\n");
         return sb.ToString();
     }
 
@@ -585,18 +628,37 @@ public static class DotnetEmitter
         var triggers = op.Op.Ext?.Where(e => e.Ns == "trigger").ToList() ?? new();
         if (triggers.Count == 0) return null;
         report.Policy("trigger-wiring", "IHostedService stub; scheduler/consumer/watcher + ack/checkpoint/batch = §8 seam");
+        // A2: unseal + partial-method. StartAsync gövdesi human-seam src/{Module}/{op}{T}Trigger.Logic.cs'te.
         var classes = triggers.Select(t =>
             $$"""
             // @trigger.{{t.Name}} → inbound hosted-service stub (ack/checkpoint/batch = §8 seam).
-            public sealed class {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger({{op.Id}}Handler handler) : IHostedService
+            public partial class {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger({{op.Id}}Handler handler) : IHostedService
             {
                 readonly {{op.Id}}Handler _handler = handler;   // inbound wiring StartAsync'te _handler.ExecuteAsync çağırır
-                public Task StartAsync(CancellationToken ct) => throw new NotImplementedException($"trigger {{t.Name}}: {{op.Id}} inbound wiring ({nameof(_handler)}.ExecuteAsync)");
+                // İnbound wiring gövdesi {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger.Logic.cs'te (yoksa-üret; üreteç ezmez).
+                public partial Task StartAsync(CancellationToken ct);
                 public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
             }
             """);
         return $"using Microsoft.Extensions.Hosting;\n\nnamespace {Root}.{module};\n\n" + string.Join("\n\n", classes) + "\n";
     }
+
+    // trigger human-seam: StartAsync gövdesi (partial-method impl) → src/{Module}/{op}{T}Trigger.Logic.cs (WriteIfAbsent, marker).
+    // namespace {Root}.{module} → gen partial ile AYNI tip (partial-method link şartı). Trigger başına bir dosya.
+    static string TriggerLogic(string module, GmOperation op, ExtJson t) =>
+        $$"""
+        using Microsoft.Extensions.Hosting;
+
+        namespace {{Root}}.{{module}};
+
+        // @trigger.{{t.Name}} inbound wiring (scheduler/consumer/watcher → _handler.ExecuteAsync) — insan/LLM doldurur. gen ezmez.
+        public partial class {{op.Id}}{{Naming.Pascal(t.Name)}}Trigger
+        {
+            public partial Task StartAsync(CancellationToken ct)
+                => throw new NotImplementedException("{{op.Id}}{{Naming.Pascal(t.Name)}}Trigger.StartAsync: doldurulacak");
+        }
+
+        """;
 
     static string? ExtPartial(string module, GmOperation op, BuildReport report)
     {
@@ -812,13 +874,33 @@ public static class DotnetEmitter
         {
             report.Realized("subscription", $"{s.Event.Name}->{s.Consumer.Op}");
             var cls = $"{s.Event.Name}To{s.Consumer.Op}Consumer";
-            sb.Append($"public sealed class {cls}({Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler handler)\n{{\n");
+            // A2: unseal + partial-method. HandleAsync gövdesi human-seam src/{Consumer.Module}/{cls}.Logic.cs'te.
+            sb.Append($"public partial class {cls}({Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler handler)\n{{\n");
             sb.Append($"    readonly {Root}.{s.Consumer.Module}.{s.Consumer.Op}Handler _handler = handler;\n");
-            sb.Append($"    public Task HandleAsync({Root}.{s.Event.Module}.{s.Event.Name} @event, CancellationToken ct = default)\n");
-            sb.Append($"        => throw new NotImplementedException($\"subscription: {s.Event.Name} → {s.Consumer.Op} (event→request eşle + {{nameof(_handler)}}.ExecuteAsync)\");\n");
+            sb.Append($"    // event→request eşleme gövdesi {cls}.Logic.cs'te (yoksa-üret; üreteç ezmez).\n");
+            sb.Append($"    public partial Task HandleAsync({Root}.{s.Event.Module}.{s.Event.Name} @event, CancellationToken ct = default);\n");
             sb.Append("}\n\n");
         }
         return sb.ToString();
+    }
+
+    // subscription human-seam: HandleAsync gövdesi (partial-method impl) → src/{Consumer.Module}/{cls}.Logic.cs (WriteIfAbsent, marker).
+    // namespace {Root} → gen consumer ile AYNI tip (partial-method link şartı); dizin Consumer.Module ama namespace App.
+    static string SubscriptionLogic(SubscriptionJson s)
+    {
+        var cls = $"{s.Event.Name}To{s.Consumer.Op}Consumer";
+        return
+            $$"""
+            namespace {{Root}};
+
+            // {{s.Event.Name}} → {{s.Consumer.Op}} event→request eşleme + dispatch — insan/LLM doldurur. gen ezmez (WriteIfAbsent).
+            public partial class {{cls}}
+            {
+                public partial Task HandleAsync({{Root}}.{{s.Event.Module}}.{{s.Event.Name}} @event, CancellationToken ct)
+                    => throw new NotImplementedException("{{cls}}.HandleAsync: doldurulacak");
+            }
+
+            """;
     }
 
     static string EventBus() =>

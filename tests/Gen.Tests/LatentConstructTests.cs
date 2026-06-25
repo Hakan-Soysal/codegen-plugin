@@ -94,8 +94,12 @@ public class LatentConstructTests
         try
         {
             var trig = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Trigger.g.cs"));
-            Assert.Contains("public sealed class CreateInvoiceCronTrigger", trig);
+            Assert.Contains("public partial class CreateInvoiceCronTrigger", trig);   // A2: unseal → partial (human-seam StartAsync)
             Assert.Contains(": IHostedService", trig);
+            Assert.Contains("public partial Task StartAsync(CancellationToken ct);", trig);   // partial-method imzası (gövde Logic.cs'te)
+            var trigLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoiceCronTrigger.Logic.cs"));
+            Assert.Contains("public partial Task StartAsync", trigLogic);
+            Assert.Contains("doldurulacak", trigLogic);   // human-seam marker
             var extf = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Ext.g.cs"));
             Assert.Contains("public const string HttpRoute = \"/invoices\";", extf);
             Assert.Contains("public const string HttpMethod = \"POST\";", extf);
@@ -150,9 +154,13 @@ public class LatentConstructTests
         try
         {
             var f = File.ReadAllText(Path.Combine(dir, "gen", "Subscriptions.g.cs"));
-            Assert.Contains("public sealed class InvoiceCreatedToGetInvoiceConsumer", f);
+            Assert.Contains("public partial class InvoiceCreatedToGetInvoiceConsumer", f);   // A2: unseal → partial (human-seam HandleAsync)
             Assert.Contains("App.Billing.GetInvoiceHandler handler", f);
             Assert.Contains("App.Billing.InvoiceCreated @event", f);
+            Assert.Contains("public partial Task HandleAsync(", f);   // partial-method imzası (gövde Logic.cs'te)
+            var consumerLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "InvoiceCreatedToGetInvoiceConsumer.Logic.cs"));
+            Assert.Contains("public partial Task HandleAsync", consumerLogic);
+            Assert.Contains("doldurulacak", consumerLogic);   // human-seam marker
             Assert.True(report.Covers("subscription", "InvoiceCreated"));
             NoDrop(report, "subscription", "InvoiceCreated");
         }

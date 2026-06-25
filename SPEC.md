@@ -19,6 +19,42 @@ kapsamındadır.
 - build-report.json: her construct `realized | unsupported(reason)` (no-silent-loss).
 - Go spike (Phase 5): aynı GM'den derlenen Go → seam doğrulama gate'i.
 
+### 2.1 build-report exit-code semantiği (INV-7) — `Gen.Cli`
+`Gen.Cli` (`Program.cs`) çıkış kodu **yalnızca** sessiz-düşen (SilentDrop)
+construct sayısına bağlıdır: `return drops.Count == 0 ? 0 : 1;` (drops =
+`BuildReport.SilentDrops`). Yani sözleşme:
+
+> **exit ≠ 0 ⟺ en az bir SilentDrop var** (DEĞİL: `clean=false`).
+
+`build-report.json` her construct'ı `constructs[].status` ile kaydeder; bunlar
+INV-7'nin falsifiye-edilebilir kanıtıdır:
+- `realized` — emit edildi.
+- `unsupported(reason)` — **açık** disposition (ör. REST-dışı serving `grpc/queue`).
+  Construct manifest'te VAR ama bilinçli emit edilmedi; bu **drop değil**, açık
+  rapordur. **Exit'i etkilemez** → `unsupported` ile bile `exit 0`.
+- `silentDrop` — manifest census'unda VAR ama emitter ne `realized` ne
+  `unsupported` etti (`Completeness.Check` → `BuildReport.Covers` = false).
+  INV-7 ihlali; **tek başına `exit 1` sebebi budur**.
+- `emitConflict` — aynı hedefe çelişkili emit.
+
+Önemli ayrım: `BuildReport.Clean` (= tüm entry'ler `realized`) `unsupported`
+varlığında `false` olur; ama **`clean=false` `exit 0` ile uyumludur** — disposed
+`unsupported` construct'lar (ör. `grpc` serving) `clean`'i bozar ama drop
+sayılmaz. Exit'i belirleyen `clean` değil, `silentDrop` varlığıdır.
+
+`build-report.json` ayrıca çözülen §8 politikalarını `policies` altında taşır.
+
+**provenance.json** (`ProvenanceIo.Write`): bu run'da yazılan tüm `Generated`
+dosyaları `{path, class: "Generated", sha256}` olarak listeler. Bu liste,
+aile-kapısının (family gate) **owned-tree** denetiminin tek kaynağıdır: kapı
+hangi dosyaların üreteç-sahipli (ezilebilir/prune-edilebilir) olduğunu buradan
+bilir; insan-sahipli seam dosyaları (`HumanSeam`/`HumanShell`) provenance'a
+girmez, prune EDİLMEZ.
+
+[INV-A] Aile-kapısı no-silent-loss garantisini construct'ları manifest'ten
+sayarak uygular; ama bu sayımın eksiksizliğinin **yetkili sinyali** build-report'un
+`silentDrop`/exit≠0 göstergesidir — kapı bu sinyali okur.
+
 ## 3. Tech stack & constraints
 - Üreteç: **.NET 10 / C#** (SDK 10.0.300 mevcut).
 - Üretilen app şekli: **Minimal API + düz CQRS handler + EF Core + küçük `Result<T>`**. Framework icat YOK.

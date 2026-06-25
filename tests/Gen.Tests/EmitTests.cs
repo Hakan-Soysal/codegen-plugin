@@ -152,7 +152,11 @@ public class EmitTests
 
             var boundary = File.ReadAllText(Path.Combine(dir, "gen", "Boundary.g.cs"));
             Assert.Contains("public interface IPaymentGateway", boundary);
-            Assert.Contains("public class PaymentGatewayClient", boundary);            // unsealed: insan extend edebilir
+            Assert.DoesNotContain("class PaymentGatewayClient", boundary);             // T4.1: throwing client artık gen'de DEĞİL (A2 human-seam)
+            // {Ext}Client human-seam'e taşındı: src/Boundary/{Ext}Client.Logic.cs (WriteIfAbsent, marker)
+            var clientLogic = File.ReadAllText(Path.Combine(dir, "src", "Boundary", "PaymentGatewayClient.Logic.cs"));
+            Assert.Contains("public class PaymentGatewayClient : IPaymentGateway", clientLogic);
+            Assert.Contains("doldurulacak", clientLogic);                              // T1.3 emptyStubMarker
             Assert.Contains("compensate: PaymentGateway.refund", boundary);            // saga skeleton
             Assert.True(File.Exists(Path.Combine(dir, "gen", "Idempotency.g.cs")));
             Assert.Contains("IdempotencyKeys = [\"customerId\"]", File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Idem.g.cs")));
