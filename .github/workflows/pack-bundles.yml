@@ -1,0 +1,80 @@
+name: Pack plugin bundles
+
+# Generator kaynağı (src/Gen.*) veya conformance değişince, plugin'e gömülü DLL'leri
+# src'ten yeniden üretir + plugin sürümünü patch-bump'lar ve geri commit'ler.
+# Böylece main'deki plugin DLL'leri ASLA bayatlamaz.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/Gen.Cli/**'
+      - 'src/Gen.Core/**'
+      - 'src/Gen.Dotnet/**'
+      - 'conformance-adapter/**'
+      - 'scripts/pack-plugin-bundles.sh'
+  workflow_dispatch: {}   # elle tetikle (manuel refresh)
+
+permissions:
+  contents: write   # bot, tazelenen DLL + sürüm bump'ını main'e geri push eder
+
+concurrency:
+  group: pack-bundles-main   # eşzamanlı push'larda bump/commit yarışını serileştir
+  cancel-in-progress: false
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Rebuild & refresh embedded bundles (src → plugin)
+        run: bash scripts/pack-plugin-bundles.sh
+
+      - name: Bump plugin version (patch, lockstep) if bundles changed
+        id: bump
+        run: |
+          set -euo pipefail
+          PLUGIN=plugins/codegen/.claude-plugin/plugin.json
+          CAP=plugins/codegen/skills/base-dotnet-rest/capability.json
+          MKT=.claude-plugin/marketplace.json
+
+          # DLL'lerde değişiklik yoksa (ör. workflow_dispatch ama src aynı) bump etme.
+          if git diff --quiet -- plugins/codegen/skills/base-dotnet-rest/techgen \
+                                  plugins/codegen/skills/base-dotnet-rest/conformance; then
+            echo "bundles unchanged → no bump"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cur=$(jq -r '.version' "$PLUGIN")                              # jq READ (güvenli, yazmıyor)
+          next=$(echo "$cur" | awk -F. '{$3+=1; print $1"."$2"."$3}')
+          echo "version: $cur → $next"
+
+          # Üç manifest lockstep (kullanıcıya görünen tek plugin sürümü). Gen.Cli.csproj (nupkg
+          # tool) AYRI kanal — kasıtlı release'te elle bump'lanır (trigger path'inde, döngü riski).
+          # MINIMAL in-place sed — jq-write tüm dosyayı reformat eder (inline array'leri patlatır);
+          # sed yalnız sürüm satırına dokunur, gürültüsüz diff. (GNU sed; runner ubuntu.)
+          for f in "$PLUGIN" "$CAP" "$MKT"; do
+            sed -i "s/\"version\": \"$cur\"/\"version\": \"$next\"/" "$f"
+          done
+
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Commit & push refreshed bundles + version bump
+        if: steps.bump.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add plugins/codegen/skills/base-dotnet-rest/techgen \
+                  plugins/codegen/skills/base-dotnet-rest/conformance \
+                  plugins/codegen/.claude-plugin/plugin.json \
+                  plugins/codegen/skills/base-dotnet-rest/capability.json \
+                  .claude-plugin/marketplace.json
+          git commit -m "chore(bundles): refresh embedded DLLs + bump plugin to v${{ steps.bump.outputs.next }} [skip ci]"
+          git push origin HEAD:main

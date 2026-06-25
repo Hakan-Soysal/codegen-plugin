@@ -1,6 +1,6 @@
 {
   "id": "techgen-dotnet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "source": {
     "marketplace": "Hakan-Soysal/codegen-plugin",
     "install": "/plugin marketplace add Hakan-Soysal/codegen-plugin && /plugin install codegen@codegen-tools"

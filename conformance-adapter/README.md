@@ -53,11 +53,16 @@ pass; `Skipped`/stub is not a fail). Usage / load / parse errors exit 2.
 
 ## Building / publishing the bundle
 
+Canonical refresh (both the `techgen` and `conformance` bundles) — run the script; do NOT hand-copy:
+
 ```
-dotnet publish conformance-adapter/Conformance.csproj -c Release -o /tmp/conf-pub
-# then copy *.dll + *.json (exclude *.pdb + the native apphost) into:
-#   plugins/codegen/skills/base-dotnet-rest/conformance/
+bash scripts/pack-plugin-bundles.sh
 ```
+
+It publishes `src/Gen.Cli` → `…/base-dotnet-rest/techgen/` and `conformance-adapter/Conformance.csproj`
+→ `…/base-dotnet-rest/conformance/` (copies `*.dll` + `*.json`, excludes `*.pdb` + the native apphost).
+On `main`, the `pack-bundles` GitHub Action runs the same script automatically whenever generator source
+changes and commits the refreshed DLLs + a plugin version patch-bump back — so the bundles never go stale.
 
 ## NOT in `Gen.slnx`
 
