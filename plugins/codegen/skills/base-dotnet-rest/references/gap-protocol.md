@@ -23,6 +23,59 @@ Bu protokol (b)'yi zorunlu, (a)'yı imkânsız kılar.
 
 ---
 
+## 0.5 — Fill-öncesi tüm-manifest feasibility ön-kapısı (Faz 0.5 — contract-only)  [fill-öncesi]
+
+> **Konum dürüstlüğü:** statik üretim (`gen/**`) generator binary'since, bu skill çağrılmadan ÖNCE yapılır
+> → §0.5 **fill-öncesidir, statik-üretim-öncesi DEĞİL** (binary-öncesi contract-soundness = `techgen-sync`).
+> **Bu, Faz 3 (§1) detection gate'in contract-türevli, tüm-manifest, fill-ÖNCESİ alt-kümesidir.**
+> Faz 3 seam-başına + post-gen (üretilmiş `.g.cs` + `build-report` okur); §0.5 manifest'in **tamamını**
+> **bir kez**, **yalnız contract'tan** (`manifest.json`/`operations.json`), **`gen/**` ve build-report'a
+> DOKUNMADAN** denetler. Amaç: defektli manifest'i fill+verify döngüsü başlamadan yakalayıp upstream'e
+> yansıtmak. K1/K2'yi YENİDEN TANIMLAMAZ — aynı kuralların contract-only ön-koşumudur.
+
+Dört denetim (geçmeyen → **DUR + `back-to-teknik-analiz`**; seam-fill çözüm-kademesi DEĞİL):
+
+### P1 — Manifest sağlık
+`meta.hasErrors == false` ∧ `coverage.unrealizedBusinessOps == []` ∧ `coverage.uncoveredEntities == []`.
+Biri ihlal → manifest güvenilmez (üretilmiş construct denetimi anlamsız) → DUR.
+
+### P2 — Referential integrity (alanlar var mı / doğru mu)
+Her op-referansı manifest koleksiyonlarında çözülmeli; "havada" referans → defekt.
+**KRİTİK — koleksiyonlar `id` ile anahtarlanır, `name` ile DEĞİL.** Çözüm kümeleri:
+`{operations[].id}`, `{entities[].id}`, `{types[].id}`, `{errors[].id}`, `{events[].id}`. (`name` alanı
+yalnız entity/type/event **field**'larındadır — `fields[].name` + `fields[].type` —, üst-koleksiyon kimliği
+değildir. `.name` ile çözmeye kalkmak HER tip-referansını yanlış "havada" sayar.) Denetimler:
+- `operations[].realizes` (+ `entities[].realizes`) → bir business-op karşılığı (`biz.<X>` biçimi).
+- `signature.returns` + `signature.params[].type` → **`{types[].id} ∪ {entities[].id} ∪ skaler-küme}`**.
+  **Skaler-küme = manifest'in kendi `ref:"scalar"` işaretiyle tanımlı tip-uzayı** (üreteç-tanıdığı skalerler:
+  `ID`, `String`, `Int`, `Decimal`, `Bool`, `Date`, `DateTime`, `Duration`, `Unit`). Bu kümeyi BEN
+  uydurmam — manifest field'larında `ref` markörü skaler-mi-referans-mı ground-truth'unu taşır.
+- `throws[]` (hata id'leri) → `{errors[].id}`,
+- `emits[]` (event id'leri) → `{events[].id}`,
+- `subscriptions[]` → kaynak `{events[].id}` + hedef `{operations[].id}`,
+- `access.{reads,creates,updates,deletes}` (entity id'leri) → `{entities[].id}`,
+- `callEdges[]` / `externals[]` referansları (op/entity/system id'leri).
+
+### P3 — K2-contract (failable → named-error, contract-only)
+§1 K2 ile AYNI kural, yalnız contract'tan: her failable `validation`/`rule`, ihlalinde
+`operations[].throws[]` → adlı `errors[]`'a eşlenebilmeli. Eşlenemeyen (adsız) → defekt.
+(PoC `Rule_0` burada — fill'den ÖNCE — yakalanır.)
+
+### P4 — K1-contract (kaynak 1-3, contract-only)
+§1 K1 ile AYNI kural ama **yalnız ilk üç kaynak** (request-param / entity-field / boundary-dönüş);
+hepsi contract'tan türetilebilir. **Kaynak-4 (`build-report.policy`) üretim-sonrasıdır → §0.5'te
+DENETLENMEZ.** İlk üç kaynağa bağlanamayan ama policy-bağımlı görünen alan → "policy-bağımlı, Faz 3'e
+ertelendi" işaretlenir, **sert-GAP sayılmaz** (yanlış infeasibility üretme; kaynak-4 yalnız post-gen Faz 3'te çözülür).
+
+### Dispozisyon (§0.5'e özgü — kademe DEĞİL)
+P1–P4'ten biri defekt çıkarırsa: **DUR — fill başlamaz.** Defekti KESİN sun (hangi P-denetimi ·
+hangi construct · ne eksik/havada). Eylem = **`back-to-teknik-analiz`** (manifest upstream'de düzeltilir)
+ya da kullanıcı contract'ı düzeltir. **Bu yapısal contract defekti seam-fill çözüm-kademesiyle
+(rung-1/2/3b) çözülmez** — policy/registry/codebase-inference bir manifest defektini onarmaz; manifest
+düzeltilir. Hepsi PASS → normal akış (Faz 1 → … → Faz 3 detection gate post-gen).
+
+---
+
 ## 1. Faz 3 — Detection gate (doldurma-ÖNCESİ, deterministik)  [§B.4.1]
 
 Her seam'in gövdesi **yazılmadan ÖNCE** dört sonlu denetim koşar. Çıktı = **gap-listesi** (bu seam için
@@ -206,6 +259,11 @@ hiçbirine** (request-param / entity-field / boundary-dönüş / build-report.po
 **rung-4: BİLİNMEYEN GAP → DUR + kullanıcıya sor**. Gövde **yazılmaz**; improvise/yorum-işaretleme **YASAK**.
 Bu senaryo PoC hatasının (sessiz "decimal varsay") tam olarak engellendiği kanıt-noktasıdır.
 
+### 5.4 (§0.5) Yapısal — fill-öncesi ön-kapı terimleri mevcut
+`gap-protocol.md` §0.5'i contract-only ön-kapı denetimlerini açıkça içerir
+(greps: `P1\|P2\|P3\|P4` ≥4; `back-to-teknik-analiz` ≥1; `gen/\*\*.*DOKUNMADAN\|contract-only` ≥1).
+§0.5 defekti **DUR + back-to-teknik-analiz**'e götürür (seam-fill kademesine DEĞİL); kaynak-4 §0.5'te denetlenmez.
+
 ---
 
 ## 6. Anti-patterns (yapma)
@@ -220,6 +278,9 @@ Bu senaryo PoC hatasının (sessiz "decimal varsay") tam olarak engellendiği ka
 - **`silentDrops` JSON alanı ARAMA** → yoktur; silent-drop sinyali = exit≠0 / `status=="unsupported"`.
 - **Aile-kapısı K1/K2'sini bu dosyaya gömme** → o T3.2 (bağımsız zorlama). Bu dosya paket-içi erken-DUR.
 - **Kademe sırasını atlama** → rung-1→4 yukarıdan tara, ilk eşleşende dur; alt rung'a düşmeden DUR etme.
+- **(§0.5) manifest defektini seam-fill kademesine ERTELEME** → contract referential-integrity / K2 /
+  K1-1..3 defekti fill-ÖNCESİ §0.5'te yakalanır; "Faz 3 koşar, geçeyim" deme. Defekt → DUR + back-to-teknik-analiz.
+- **(§0.5) yanlış infeasibility ÜRETME** → kaynak-4 (`build-report.policy`) post-gen'dir; policy-bağımlı alanı §0.5'te "bağlanamıyor" GAP'i sayma.
 
 ## 7. Out of scope (bu dosya)
 

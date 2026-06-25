@@ -106,7 +106,53 @@ davranışsal kapsanıyor mu"**. Üç değişmez tüm tasarımı dayatır:
   contract), `gen.config.json` (paket-spesifik profil: dbProvider vb.), `targetDir`, üretilmiş
   `gen/**` + `build-report`. Biri yoksa DUR + bildir.
 
-Sonra altı fazı **sırayla** yürüt.
+Sonra önce **Faz 0.5 fill-öncesi ön-kapısını** koş; geçerse altı fazı **sırayla** yürüt.
+
+---
+
+## Faz 0.5 — Fill-öncesi tüm-manifest yapılabilirlik ön-kapısı (contract-only)
+
+**Amaç:** Seam doldurmaya başlamadan ÖNCE, manifest'in (`manifest.json`/`operations.json`) **kendi-içinde
+yapılabilir** olup olmadığını kavramsal olarak doğrula — "alanlar var mı, doğru mu, ön-şartlar yerinde
+mi". Üretilmiş yüzeyi (`gen/**`) ve `build-report`'u **OKUMAZ**; yalnız contract'a bakar → defektli
+manifest'i, pahalı **fill+verify döngüsü başlamadan** yakalar ve upstream'e (teknik-analiz) yansıtır.
+
+> **Konum dürüstlüğü:** statik üretim (`gen/**`) bu skill çağrılmadan ÖNCE generator binary'since yapılır;
+> bu ön-kapı **fill-öncesidir, statik-üretim-öncesi DEĞİL**. (Binary'den önce contract-soundness istenirse
+> o, `techgen-sync`'in işi — burası seam-fill katmanının savunma kapısı.) Bu, Faz 3 detection gate'in
+> (post-gen, seam-başına) **contract-türevli, tüm-manifest, fill-öncesi alt-kümesidir** — onu TEKRARLAMAZ,
+> ondan ÖNCE koşar. K1/K2'yi yeniden tanımlamaz; aynı kuralların contract-only ön-koşumudur. Mekanik:
+> `references/gap-protocol.md` §0.5.
+
+**Dört contract-only denetim (tümü manifest'ten; geçmeyen → DUR):**
+- **P1 — Manifest sağlık:** `meta.hasErrors=false` ∧ `coverage.unrealizedBusinessOps=[]` ∧
+  `coverage.uncoveredEntities=[]`. Değilse → manifest güvenilmez/eksik.
+- **P2 — Referential integrity (alanlar var mı/doğru mu):** her op-referansı manifest koleksiyonlarında
+  **`id` ile** (koleksiyonlar `id`'le anahtarlı, `name` ile DEĞİL) çözülmeli — `realizes`,
+  `signature.returns` + `params[].type` (→ `{types[].id}∪{entities[].id}∪skaler-küme}`; skaler-küme
+  manifest'in `ref:"scalar"` markörüyle ground-truth), `throws[]` (→ `{errors[].id}`), `emits[]`
+  (→ `{events[].id}`), `subscriptions` (→ event-id+op-id), `access.{reads,creates,updates,deletes}`
+  (→ `{entities[].id}`), `callEdges`/`externals` referansları. Çözülemeyen referans ("havada"
+  tip/hata/event) → defekt. Mekanik (`id`-keying + skaler-küme): `references/gap-protocol.md` §0.5 P2.
+- **P3 — K2-contract (failable→named-error):** her failable `validation`/`rule`, ihlalinde `throws`
+  kataloğunda (`operations[].throws[]` → adlı `errors[]`) bir adlı-hataya eşlenebilmeli. Eşlenemeyen
+  (adsız) → defekt. (gap-protocol K2'nin contract-only ön-koşumu; PoC `Rule_0` burada yakalanır.)
+- **P4 — K1-contract (kaynak 1-3):** her `validation`/`rule`/`invariant` predicate-input alanı,
+  request-param / entity-field / boundary-dönüş'ten **birine** bağlanabilmeli. **Kaynak-4
+  (`build-report.policy`) üretim-sonrasıdır** → bu ön-kapıda kontrol EDİLMEZ; policy-bağımlı görünen
+  alan "policy-bağımlı, Faz 3 post-gen kapıya ertelendi" diye işaretlenir, **sert-GAP sayılmaz**
+  (yanlış infeasibility üretme).
+
+**Dispozisyon — manifest defekti upstream'dir, bu skill DÜZELTMEZ:** herhangi bir denetim defekt
+çıkarırsa → **DUR**, defekti KESİN sun (hangi denetim · hangi construct · ne eksik/havada), eylem =
+**`back-to-teknik-analiz`** (manifest'i üreten upstream'e dön) ya da kullanıcı contract'ı düzeltsin.
+improvise/uydurma YASAK. Bu, seam-fill çözüm-kademesi (rung-1/2/3b) DEĞİL — yapısal contract defekti
+policy ile çözülmez; manifest düzeltilir. Hepsi PASS → Faz 1'e geç.
+
+**⚠ Anti-pattern — defekti seam-fill'e erteleme:** "Faz 3 zaten K1/K2 koşar, burada geçeyim" deme;
+tüm-manifest contract soundness en erken burada doğrulanır (referential integrity **yalnız** buradadır).
+**⚠ Anti-pattern — yanlış infeasibility:** kaynak-4 policy-bağımlı alanı bu ön-kapıda "bağlanamıyor"
+diye GAP sayma → o post-gen Faz 3'ün işi.
 
 ---
 
@@ -255,6 +301,6 @@ Referans PoC, fill akışının fazlardan nasıl geçtiğini somutlaştırır:
 ## Referans dosyaları (gerektiğinde oku — İÇERİK ayrı task'larda)
 
 - `${CLAUDE_SKILL_DIR}/capability.json` — descriptor (seamPath/marker/sıra/arketip kuralları). **T1.3.**
-- `${CLAUDE_SKILL_DIR}/references/gap-protocol.md` — gap-runtime (K1–K4 detection gate + çözüm-kademesi + DUR/sor/kayıt içeriği). **T5.2.**
+- `${CLAUDE_SKILL_DIR}/references/gap-protocol.md` — gap-runtime: **§0.5 fill-öncesi tüm-manifest feasibility ön-kapısı (contract-only P1–P4)** + K1–K4 detection gate + çözüm-kademesi + DUR/sor/kayıt içeriği. **T5.2.**
 - Arketip playbook'ları + few-shot doğru-doldurulmuş örnekler — **T5.3.**
 - `${CLAUDE_SKILL_DIR}/references/verify-loop.md` — iki-kapılı oracle (build + conformance, deterministik/LLM-judge yasak) + retry/fresh-start + halüsinasyon kapısı. **T5.5.**
