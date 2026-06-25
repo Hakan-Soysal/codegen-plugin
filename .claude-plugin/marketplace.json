@@ -8,7 +8,7 @@
     {
       "name": "codegen",
       "source": "./plugins/codegen",
-      "description": "techgen-dotnet üreteç+doldurucu referans paketinin LLM-doldurucu yarısı (filler skill). [dsl-generator] işaretiyle CommandDSL kesif'inin self-describe keşfine görünür; capability descriptor'ı (capability.json) ile eşleşir. Boş human-seam'leri (Command/Query/Boundary/Trigger/Subscription) arketip-temelli in-place doldurur, build+conformance ile doğrular, bilinmeyen gap'te DUR der.",
+      "description": "techgen-dotnet üreteç+doldurucu referans paketinin LLM-doldurucu yarısı (base-dotnet-rest skill, .NET/C# REST). [dsl-generator] işaretiyle CommandDSL kesif'inin self-describe keşfine görünür; capability descriptor'ı (capability.json) ile eşleşir. Boş human-seam'leri (Command/Query/Boundary/Trigger/Subscription) arketip-temelli in-place doldurur, build+conformance ile doğrular, bilinmeyen gap'te DUR der.",
       "version": "0.2.0",
       "category": "development",
       "tags": ["dsl-generator", "code-generation", "csharp", "dotnet", "seam-filler", "techgen", "codegen", "command-dsl"]

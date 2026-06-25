@@ -7,7 +7,7 @@ contract-derived). The package cannot fudge it (A3 invariant).
 
 Shipped as a **bundled, framework-dependent console runner** — installs with the codegen plugin and
 runs install-only via `dotnet Conformance.dll` on the user's .NET runtime (no SDK build, no clone),
-exactly like the bundled generator at `plugins/codegen/skills/filler/techgen/`.
+exactly like the bundled generator at `plugins/codegen/skills/base-dotnet-rest/techgen/`.
 
 ## Projects
 
@@ -56,7 +56,7 @@ pass; `Skipped`/stub is not a fail). Usage / load / parse errors exit 2.
 ```
 dotnet publish conformance-adapter/Conformance.csproj -c Release -o /tmp/conf-pub
 # then copy *.dll + *.json (exclude *.pdb + the native apphost) into:
-#   plugins/codegen/skills/filler/conformance/
+#   plugins/codegen/skills/base-dotnet-rest/conformance/
 ```
 
 ## NOT in `Gen.slnx`

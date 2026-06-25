@@ -1,7 +1,7 @@
 ---
-name: filler
+name: base-dotnet-rest
 description: >-
-  [dsl-generator] Referans generator+filler paketinin LLM-doldurucu yarısı. Statik üretilmiş
+  [dsl-generator] .NET/C# REST üreticisinin (techgen-dotnet) referans paketinin LLM-doldurucu (seam) yarısı. Statik üretilmiş
   (`gen/**`) bir .NET projesindeki BOŞ insan-seam'lerini (`{op}Handler.Logic.cs` ve T4-sonrası
   tek-tip in-place trigger/subscription/boundary seam'leri) arketip-bazlı uzman playbook'larla,
   kanonik sırada, contract'a SADIK biçimde doldurur; her seam'i `dotnet build` + conformance
@@ -14,7 +14,7 @@ description: >-
   insan-seam'i doldurur. `[dsl-generator]`
 ---
 
-# Filler — statik üretilmiş projedeki insan-seam'lerini doldur
+# base-dotnet-rest — .NET/C# REST projesindeki insan-seam'lerini doldur
 
 Bu skill, eşli generator'ın **statik kattı** (`gen/**`) ürettikten sonra geriye kalan **boş
 insan-seam'lerini** (iş mantığı = orkestrasyon gövdesi) doldurur. Statik kat zaten üyeleri (adlı
