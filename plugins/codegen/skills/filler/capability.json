@@ -2,8 +2,8 @@
   "id": "techgen-dotnet",
   "version": "0.2.0",
   "source": {
-    "marketplace": "vennyx/command-dsl",
-    "install": "/plugin install command-dsl@vennyx/command-dsl"
+    "marketplace": "Hakan-Soysal/codegen-plugin",
+    "install": "/plugin marketplace add Hakan-Soysal/codegen-plugin && /plugin install codegen@codegen-tools"
   },
   "invocation": {
     "type": "cli",
