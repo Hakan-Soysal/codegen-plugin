@@ -1,5 +1,11 @@
 # Refactor Plan — Generator → "gen/ segregation + pure projection + provenance + thin shell"
 
+> ⚠️ **KISMEN GEÇERSİZ (superseded).** Route yerleşimine dair bölümler (`gen/{Module}/Wiring.g.cs`
+> içinde inline `MapPost/MapGet`) artık geçerli DEĞİL. Sonraki `feature-slice` refactor'ı route'u
+> op'un `gen/{Module}/{Op}/{Op}.Endpoint.g.cs` slice dosyasına (`Map{Op}`/`Add{Op}`) taşıdı;
+> `Wiring.g.cs` saf aggregator. Bu dosyanın gen/src segregation + provenance + prune ilkeleri hâlâ geçerli.
+
+
 > Amaç: Mevcut `techgen` üretecini, son 3 turda kararlaştırılan ilkelere göre elden
 > geçirmek. İlkeler: (1) **fiziksel ayrım** — `gen/` %100 üreteç-sahibi (üzerine yaz +
 > orphan prune), insan kodu ayrı ağaçta (yoksa-üret); (2) **saf projeksiyon ≠ apply** —

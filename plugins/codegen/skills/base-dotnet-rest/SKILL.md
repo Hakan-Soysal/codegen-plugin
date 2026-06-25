@@ -108,8 +108,9 @@ Sonra altı fazı **sırayla** yürüt.
 
 **Amaç:** Her seam için sınırlı, kayıtlı bağlam paketi kur (agent'ın "tahmin etmesi"ne bırakma).
 **Derle:**
-- **`{op}` prefix → handler partial ailesi.** `{op}Handler` kardeş `.g.cs` partial'larını topla
-  (`{op}Handler.g.cs`, `.Idem.g.cs`, `.Page.g.cs`, `.Trigger.g.cs`, `Subscriptions.g.cs` vb.) →
+- **`{op}` prefix → handler partial ailesi.** O op'un feature-slice klasöründen (`gen/{Module}/{op}/`)
+  `{op}` kardeş `.g.cs` partial'larını topla
+  (`{op}.g.cs`, `.Endpoint.g.cs`, `.Idem.g.cs`, `.Page.g.cs`, `.Trigger.g.cs` + module kökündeki `Subscriptions.g.cs` vb.) →
   doldurulacak gövdenin çağırabileceği üye yüzeyi (`Validation_N`, `Rule_N`,
   `{Entity}Invariants.Invariant_N`, hata fabrikaları, `RequiredRoles`, `IdempotencyKeys`,
   `I{External}` client).

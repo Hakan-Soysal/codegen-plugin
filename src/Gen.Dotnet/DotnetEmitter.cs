@@ -40,9 +40,11 @@ public static class DotnetEmitter
             // subscription human-seam: HandleAsync gövdesi (gen değil) → src/{Consumer.Module}/{cls}.Logic.cs (WriteIfAbsent, ezilmez).
             foreach (var s in gm.Subscriptions)
             {
-                var subDir = Path.Combine(src, s.Consumer.Module);
+                var subDir = Path.Combine(src, s.Consumer.Module, s.Consumer.Op);   // consumer op'un slice'ı: src/{Module}/{Op}
                 Directory.CreateDirectory(subDir);
-                WriteIfAbsent(Path.Combine(subDir, $"{s.Event.Name}To{s.Consumer.Op}Consumer.Logic.cs"), SubscriptionLogic(s));
+                var subFile = $"{s.Event.Name}To{s.Consumer.Op}Consumer.Logic.cs";
+                MigrateSeamIfFlat(Path.Combine(src, s.Consumer.Module, subFile), Path.Combine(subDir, subFile));
+                WriteIfAbsent(Path.Combine(subDir, subFile), SubscriptionLogic(s));
             }
         }
 
@@ -93,41 +95,50 @@ public static class DotnetEmitter
 
             foreach (var op in gm.Operations.Where(o => o.Module == module.Name))
             {
-                WriteAlways(Path.Combine(dir, $"{op.Id}.g.cs"), OperationFile(module.Name, op, report));
-                Directory.CreateDirectory(humanDir);
-                WriteIfAbsent(Path.Combine(humanDir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
+                var opDir = Path.Combine(dir, op.Id);              // feature slice: gen/{Module}/{Op}
+                Directory.CreateDirectory(opDir);
+                var opHumanDir = Path.Combine(humanDir, op.Id);    // mirror human seam: src/{Module}/{Op}
+                WriteAlways(Path.Combine(opDir, $"{op.Id}.g.cs"), OperationFile(module.Name, op, report));
+                WriteAlways(Path.Combine(opDir, $"{op.Id}.Endpoint.g.cs"), EndpointFile(module.Name, op));   // Add{Op}/Map{Op} — slice-içi endpoint
+                Directory.CreateDirectory(opHumanDir);
+                MigrateSeamIfFlat(Path.Combine(humanDir, $"{op.Id}Handler.Logic.cs"), Path.Combine(opHumanDir, $"{op.Id}Handler.Logic.cs"));
+                WriteIfAbsent(Path.Combine(opHumanDir, $"{op.Id}Handler.Logic.cs"), LogicFile(module.Name, op));
                 var guards = GuardsFile(module.Name, op, gm, report);
-                if (guards is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Guards.g.cs"), guards);
+                if (guards is not null) WriteAlways(Path.Combine(opDir, $"{op.Id}.Guards.g.cs"), guards);
                 var auth = AuthFile(module.Name, op, report);
-                if (auth is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Auth.g.cs"), auth);
+                if (auth is not null) WriteAlways(Path.Combine(opDir, $"{op.Id}.Auth.g.cs"), auth);
                 foreach (var ev in op.Op.Emits) report.Realized("emits", $"{op.Id}->{ev}");
                 if (op.Op.Pagination is { } pg)
                 {
                     report.Realized("pagination", op.Id);
                     report.Policy("pagination-strategy", $"{pg.Strategy} (generator-policy)");
                     report.Policy("cursor-token", "opaque (generator-policy)");
-                    WriteAlways(Path.Combine(dir, $"{op.Id}.Page.g.cs"), PagePartial(module.Name, op, pg));
+                    WriteAlways(Path.Combine(opDir, $"{op.Id}.Page.g.cs"), PagePartial(module.Name, op, pg));
                 }
                 if (op.Op.Idempotent is not null)
                 {
-                    WriteAlways(Path.Combine(dir, $"{op.Id}.Idem.g.cs"), IdemPartial(module.Name, op));
+                    WriteAlways(Path.Combine(opDir, $"{op.Id}.Idem.g.cs"), IdemPartial(module.Name, op));
                     report.Realized("idempotent", op.Id); report.Policy("dedup-store", "in-memory (generator-policy)");
                 }
                 var ext = ExtPartial(module.Name, op, report);
-                if (ext is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Ext.g.cs"), ext);
+                if (ext is not null) WriteAlways(Path.Combine(opDir, $"{op.Id}.Ext.g.cs"), ext);
                 var trigger = TriggerPartial(module.Name, op, report);
                 if (trigger is not null)
                 {
-                    WriteAlways(Path.Combine(dir, $"{op.Id}.Trigger.g.cs"), trigger);
-                    // trigger gövdesi human-seam: src/{Module}/{op}{T}Trigger.Logic.cs (WriteIfAbsent, ezilmez, marker).
-                    Directory.CreateDirectory(humanDir);
+                    WriteAlways(Path.Combine(opDir, $"{op.Id}.Trigger.g.cs"), trigger);
+                    // trigger gövdesi human-seam: src/{Module}/{Op}/{op}{T}Trigger.Logic.cs (WriteIfAbsent, ezilmez, marker).
+                    Directory.CreateDirectory(opHumanDir);
                     foreach (var t in op.Op.Ext!.Where(e => e.Ns == "trigger"))
-                        WriteIfAbsent(Path.Combine(humanDir, $"{op.Id}{Naming.Pascal(t.Name)}Trigger.Logic.cs"), TriggerLogic(module.Name, op, t));
+                    {
+                        var triggerFile = $"{op.Id}{Naming.Pascal(t.Name)}Trigger.Logic.cs";
+                        MigrateSeamIfFlat(Path.Combine(humanDir, triggerFile), Path.Combine(opHumanDir, triggerFile));
+                        WriteIfAbsent(Path.Combine(opHumanDir, triggerFile), TriggerLogic(module.Name, op, t));
+                    }
                 }
                 var throws = ThrowsPartial(module.Name, op, gm, report);
-                if (throws is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Throws.g.cs"), throws);
+                if (throws is not null) WriteAlways(Path.Combine(opDir, $"{op.Id}.Throws.g.cs"), throws);
                 var consistency = ConsistencyPartial(module.Name, op, report);
-                if (consistency is not null) WriteAlways(Path.Combine(dir, $"{op.Id}.Consistency.g.cs"), consistency);
+                if (consistency is not null) WriteAlways(Path.Combine(opDir, $"{op.Id}.Consistency.g.cs"), consistency);
                 if (op.Op.Note is not null) report.Realized("note", op.Id);
                 report.Realized("visibility", op.Id);   // exposed → REST map (Program); internal → route YOK (aşağıda gate'lenir)
                 if (op.Op.Visibility == "internal") report.Policy("visibility", "internal → public route emit edilmez (subscription/trigger/calls ile erişilir)");
@@ -200,6 +211,19 @@ public static class DotnetEmitter
 
     // HumanSeam: insan/LLM sahibi, asla ezilmez, yoksa-üret. Prune EDİLMEZ (provenance'a girmez).
     static void WriteIfAbsent(string path, string content) { if (!File.Exists(path)) File.WriteAllText(path, content); }
+
+    // Brownfield migrasyon: insan seam'i eski DÜZ yolda kalmışsa (pre-slice layout) yeni slice
+    // klasörüne TAŞI — WriteIfAbsent'tan ÖNCE. Aksi halde eski düz + yeni stub = aynı partial
+    // method'un iki implementing declaration'ı → CS0757 (brownfield regen build'i kırar).
+    // Gövde korunur (File.Move); gen-tarafı eski düz .g.cs'ler provenance-prune ile zaten temizlenir.
+    static void MigrateSeamIfFlat(string oldFlatPath, string newSlicePath)
+    {
+        if (File.Exists(oldFlatPath) && !File.Exists(newSlicePath))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(newSlicePath)!);
+            File.Move(oldFlatPath, newSlicePath);
+        }
+    }
 
     // ── şablonlar ───────────────────────────────────────────────────────
     static string ResultTypes() =>
@@ -1157,7 +1181,8 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
-    // Generated: per-module Add{M}Module/Map{M}Module. Per-op handler/hosted-service kayıtları + o modülün route'ları.
+    // Generated: per-module Add{M}Module/Map{M}Module — saf aggregator. Her op'un DI+route'u kendi
+    // slice'ındaki {Op}.Endpoint.g.cs'te (Add{Op}/Map{Op}); module wiring yalnız bunları toplar.
     static string ModuleWiring(ModuleDecl module, GenerationModel gm)
     {
         var ops = gm.Operations.Where(o => o.Module == module.Name).ToList();
@@ -1166,21 +1191,38 @@ public static class DotnetEmitter
 
         sb.Append($"    public static IServiceCollection Add{module.Name}Module(this IServiceCollection services)\n    {{\n");
         foreach (var op in ops)
-        {
-            sb.Append($"        services.AddScoped<{op.Id}Handler>();\n");
-            foreach (var t in op.Op.Ext?.Where(e => e.Ns == "trigger") ?? Enumerable.Empty<ExtJson>())
-                sb.Append($"        services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
-        }
+            sb.Append($"        services.Add{op.Id}();\n");
         sb.Append("        return services;\n    }\n\n");
 
         sb.Append($"    public static IEndpointRouteBuilder Map{module.Name}Module(this IEndpointRouteBuilder app)\n    {{\n");
         foreach (var op in ops)
-            if (op.Op.Visibility != "internal")   // internal op → public route YOK
-                foreach (var s in op.Op.Serving)
-                {
-                    var line = MapLine(op, s);
-                    if (line.Length > 0) sb.Append("        " + line);
-                }
+            sb.Append($"        app.Map{op.Id}();\n");
+        sb.Append("        return app;\n    }\n}\n");
+        return sb.ToString();
+    }
+
+    // Feature-slice endpoint dosyası: o op'un DI kaydı (Add{Op}) + route mapping (Map{Op}) bir arada.
+    // REPR "Endpoint" bacağı — route, ait olduğu slice'ın içinde yaşar; module wiring sadece aggregate eder.
+    static string EndpointFile(string module, GmOperation op)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"using {Root};\n\nnamespace {Root}.{module};\n\npublic static class {op.Id}Endpoint\n{{\n");
+
+        // Add{Op}: handler + (varsa) trigger hosted-service'leri. Visibility'den bağımsız — internal op da DI'a girer.
+        sb.Append($"    public static IServiceCollection Add{op.Id}(this IServiceCollection services)\n    {{\n");
+        sb.Append($"        services.AddScoped<{op.Id}Handler>();\n");
+        foreach (var t in op.Op.Ext?.Where(e => e.Ns == "trigger") ?? Enumerable.Empty<ExtJson>())
+            sb.Append($"        services.AddHostedService<{Root}.{op.Module}.{op.Id}{Naming.Pascal(t.Name)}Trigger>();\n");
+        sb.Append("        return services;\n    }\n\n");
+
+        // Map{Op}: public route(lar). internal op veya non-rest serving → route yok (gövde boş).
+        sb.Append($"    public static IEndpointRouteBuilder Map{op.Id}(this IEndpointRouteBuilder app)\n    {{\n");
+        if (op.Op.Visibility != "internal")
+            foreach (var s in op.Op.Serving)
+            {
+                var line = MapLine(op, s);
+                if (line.Length > 0) sb.Append("        " + line);
+            }
         sb.Append("        return app;\n    }\n}\n");
         return sb.ToString();
     }

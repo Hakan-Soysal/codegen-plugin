@@ -50,7 +50,7 @@ public class LatentConstructTests
             WithOp(m, Op(m, "CreateInvoice") with { Consistency = new Consistency("eventual", "durable") }));
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Consistency.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Consistency.g.cs"));
             Assert.Contains("outbox", f);
             Assert.Contains("ConsistencyRisk = \"eventual\"", f);
             Assert.Contains("ConsistencyMode = \"durable\"", f);
@@ -93,14 +93,14 @@ public class LatentConstructTests
         });
         try
         {
-            var trig = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Trigger.g.cs"));
+            var trig = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Trigger.g.cs"));
             Assert.Contains("public partial class CreateInvoiceCronTrigger", trig);   // A2: unseal → partial (human-seam StartAsync)
             Assert.Contains(": IHostedService", trig);
             Assert.Contains("public partial Task StartAsync(CancellationToken ct);", trig);   // partial-method imzası (gövde Logic.cs'te)
-            var trigLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoiceCronTrigger.Logic.cs"));
+            var trigLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "CreateInvoice", "CreateInvoiceCronTrigger.Logic.cs"));
             Assert.Contains("public partial Task StartAsync", trigLogic);
             Assert.Contains("doldurulacak", trigLogic);   // human-seam marker
-            var extf = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Ext.g.cs"));
+            var extf = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Ext.g.cs"));
             Assert.Contains("public const string HttpRoute = \"/invoices\";", extf);
             Assert.Contains("public const string HttpMethod = \"POST\";", extf);
             Assert.True(report.Covers("@trigger.cron", "CreateInvoice"));
@@ -158,7 +158,7 @@ public class LatentConstructTests
             Assert.Contains("App.Billing.GetInvoiceHandler handler", f);
             Assert.Contains("App.Billing.InvoiceCreated @event", f);
             Assert.Contains("public partial Task HandleAsync(", f);   // partial-method imzası (gövde Logic.cs'te)
-            var consumerLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "InvoiceCreatedToGetInvoiceConsumer.Logic.cs"));
+            var consumerLogic = File.ReadAllText(Path.Combine(dir, "src", "Billing", "GetInvoice", "InvoiceCreatedToGetInvoiceConsumer.Logic.cs"));
             Assert.Contains("public partial Task HandleAsync", consumerLogic);
             Assert.Contains("doldurulacak", consumerLogic);   // human-seam marker
             Assert.True(report.Covers("subscription", "InvoiceCreated"));
@@ -175,9 +175,10 @@ public class LatentConstructTests
             WithOp(m, Op(m, "GetInvoice") with { Visibility = "internal" }));   // serving korunur, route DÜŞMELİ
         try
         {
-            var prog = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Wiring.g.cs"));   // route'lar Faz3'te Wiring fragment'ında
-            Assert.DoesNotContain("\"/invoices/{id}\"", prog);   // internal GetInvoice → route YOK
-            Assert.Contains("\"/invoices\"", prog);              // exposed CreateInvoice/ListInvoices → route VAR
+            var getEp = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "GetInvoice", "GetInvoice.Endpoint.g.cs"));   // route slice'ın Endpoint dosyasında
+            Assert.DoesNotContain("\"/invoices/{id}\"", getEp);   // internal GetInvoice → Map{Op} boş, route YOK
+            var createEp = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Endpoint.g.cs"));
+            Assert.Contains("\"/invoices\"", createEp);           // exposed CreateInvoice → route VAR
             Assert.True(report.Covers("visibility", "GetInvoice"));
         }
         finally { Directory.Delete(dir, true); }
@@ -242,7 +243,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Guards.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Guards.g.cs"));
             Assert.Contains("// for guard: \"credit-policy\"", f);
             Assert.True(report.Covers("guardRef", "CreateInvoice"));
             NoDrop(report, "guardRef", "CreateInvoice");
@@ -257,7 +258,7 @@ public class LatentConstructTests
         var (report, dir, _) = EmitMut(m => m);   // fixture GetInvoice: route /invoices/{id} + non-route query param includeVoid
         try
         {
-            var prog = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "Wiring.g.cs"));   // route'lar Faz3'te Wiring fragment'ında
+            var prog = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "GetInvoice", "GetInvoice.Endpoint.g.cs"));   // route slice'ın Endpoint dosyasında (Map{Op})
             // lambda hem route token'ı hem non-route query param'ı içermeli (ctor arity tam)
             Assert.Contains("string id", prog);
             Assert.Contains("bool includeVoid", prog);
@@ -277,10 +278,10 @@ public class LatentConstructTests
         });
         try
         {
-            var op = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices.g.cs"));
+            var op = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices", "ListInvoices.g.cs"));
             Assert.Contains("int? Offset", op);                 // offset-shaped, NOT cursor
             Assert.DoesNotContain("string? Cursor", op);
-            var page = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices.Page.g.cs"));
+            var page = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "ListInvoices", "ListInvoices.Page.g.cs"));
             Assert.Contains("PaginationStrategy = \"offset\"", page);
             Assert.Contains("DefaultPageSize = 50", page);       // declared size reaches output
         }
@@ -300,7 +301,7 @@ public class LatentConstructTests
         });
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.Guards.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.Guards.g.cs"));
             Assert.Contains("input.Amount > 0.5m", f);          // decimal-safe
             Assert.DoesNotContain("input.Amount > 0.5)", f);     // ham double (CS0019) DEĞİL
         }
@@ -396,7 +397,7 @@ public class LatentConstructTests
         var (report, dir, _) = EmitMut(m => m);   // fixture CreateInvoice has a note
         try
         {
-            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice.g.cs"));
+            var f = File.ReadAllText(Path.Combine(dir, "gen", "Billing", "CreateInvoice", "CreateInvoice.g.cs"));
             Assert.Contains("/// <summary>Müşteri kredi limiti dış servisten gelir.</summary>", f);
             Assert.True(report.Covers("note", "CreateInvoice"));
             NoDrop(report, "note", "CreateInvoice");

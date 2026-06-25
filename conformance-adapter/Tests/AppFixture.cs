@@ -45,7 +45,7 @@ public static class AppFixture
     // MARKER-convention: doldurulmuş seam 'doldurulacak' substring'i İÇERMEZ.
     public static void FillCreateInvoiceSeam(string dir, string executeBody)
     {
-        var path = Path.Combine(dir, "src", "Billing", "CreateInvoiceHandler.Logic.cs");
+        var path = Path.Combine(dir, "src", "Billing", "CreateInvoice", "CreateInvoiceHandler.Logic.cs");
         var content =
             "using App;\n" +
             "using App.Billing;\n\n" +

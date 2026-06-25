@@ -47,7 +47,7 @@ public class SkillSyncTests
 
             // signature değişimini simüle et: insan Logic.cs'i artık üretilen .g.cs partial'ıyla
             // eşleşmeyen bir imza implement ediyor (eski imza). Üreteç regen'de Logic'i EZMEZ.
-            var logic = Path.Combine(dir, "src", "Billing", "CreateInvoiceHandler.Logic.cs");
+            var logic = Path.Combine(dir, "src", "Billing", "CreateInvoice", "CreateInvoiceHandler.Logic.cs");
             File.WriteAllText(logic,
                 """
                 using App;
@@ -68,6 +68,30 @@ public class SkillSyncTests
     }
 
     [Fact]
+    public void Brownfield_flat_layout_human_seam_is_migrated_into_slice_on_regen()   // pre-slice app → slice layout
+    {
+        var dir = TempDir();
+        try
+        {
+            DotnetEmitter.Emit(Gm(), dir, new BuildReport());
+
+            // pre-slice app'i simüle et: insan Logic'i ESKİ düz yolda, slice klasörü yok.
+            var slice = Path.Combine(dir, "src", "Billing", "CreateInvoice", "CreateInvoiceHandler.Logic.cs");
+            var flat = Path.Combine(dir, "src", "Billing", "CreateInvoiceHandler.Logic.cs");
+            File.Move(slice, flat);
+            Directory.Delete(Path.Combine(dir, "src", "Billing", "CreateInvoice"), true);
+
+            DotnetEmitter.Emit(Gm(), dir, new BuildReport());   // brownfield regen
+
+            // düz seam slice'a TAŞINIR (kopyalanmaz) → tek implementing partial, CS0757 yok.
+            Assert.False(File.Exists(flat), "eski düz Logic.cs slice'a taşındı (artık yok)");
+            Assert.True(File.Exists(slice), "Logic.cs slice klasöründe");
+            Assert.Equal(0, Build(dir));   // çift partial-impl çakışması yok → derlenir
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
     public void Orphan_human_logic_is_detectable_after_op_removed()   // skill adım 4 tespiti
     {
         var dir = TempDir();
@@ -76,8 +100,8 @@ public class SkillSyncTests
             var gm = Gm();
             DotnetEmitter.Emit(gm, dir, new BuildReport());
 
-            var genFile = Path.Combine(dir, "gen", "Billing", "GetInvoice.g.cs");
-            var logic = Path.Combine(dir, "src", "Billing", "GetInvoiceHandler.Logic.cs");
+            var genFile = Path.Combine(dir, "gen", "Billing", "GetInvoice", "GetInvoice.g.cs");
+            var logic = Path.Combine(dir, "src", "Billing", "GetInvoice", "GetInvoiceHandler.Logic.cs");
             Assert.True(File.Exists(genFile) && File.Exists(logic));
 
             // GetInvoice manifest'ten çıkarıldı → regen
@@ -87,7 +111,7 @@ public class SkillSyncTests
             // SKILL.md adım-4 tespit mantığı: gen/ karşılığı olmayan Logic.cs = orphan
             Assert.False(File.Exists(genFile), ".g.cs prune edildi");
             Assert.True(File.Exists(logic), "Logic.cs orphan olarak DURUR (auto-silinmez) → skill sorar");
-            var orphan = !File.Exists(Path.Combine(dir, "gen", "Billing", "GetInvoice.g.cs"))
+            var orphan = !File.Exists(Path.Combine(dir, "gen", "Billing", "GetInvoice", "GetInvoice.g.cs"))
                          && File.Exists(logic);
             Assert.True(orphan, "orphan tespit edilebilir (gen partial yok + Logic var)");
         }

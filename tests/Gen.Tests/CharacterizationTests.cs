@@ -114,8 +114,8 @@ public class CharacterizationTests
                 Json.Parse<ContractFile>(Fixtures.Read("operations.json")));
             DotnetEmitter.Emit(gm, dir, new BuildReport());
 
-            var genFile = Path.Combine(dir, "gen", "Billing", "GetInvoice.g.cs");
-            var humanLogic = Path.Combine(dir, "src", "Billing", "GetInvoiceHandler.Logic.cs");
+            var genFile = Path.Combine(dir, "gen", "Billing", "GetInvoice", "GetInvoice.g.cs");
+            var humanLogic = Path.Combine(dir, "src", "Billing", "GetInvoice", "GetInvoiceHandler.Logic.cs");
             Assert.True(File.Exists(genFile), "ön koşul: .g.cs üretildi");
             Assert.True(File.Exists(humanLogic), "ön koşul: Logic.cs üretildi");
             File.WriteAllText(humanLogic, "// HUMAN BODY\n");   // insan emeği
