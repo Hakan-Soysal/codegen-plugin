@@ -82,6 +82,12 @@ davranışsal kapsanıyor mu"**. Üç değişmez tüm tasarımı dayatır:
   "makul varsayım" YOK. **"Yorum ≠ STOP":** bir şeyi açıklayıcı yorumla geçiştirmek STOP değildir;
   gerçek STOP = yazımı durdurup gap'i kesin sunmak. (PoC hatası: `ResourceCreditLimit` bağlanamadı
   ama STOP edilmedi → improvisation. Bu yasak.)
+- **Codebase-grounded KESİN inference → kaydet + devam (dar istisna).** Contract'ta açık olmayan bir
+  eşlemeyi (ör. iş-dili "Müşteri" → hangi entity; Customer↔User bağı) mevcut codebase **tek-aday-
+  deterministik** çözüyorsa (tam **bir** FK/nav/tip), varsayımı app-kökündeki **`ASSUMPTIONS.md`**'ye
+  (insan-tree; `gen/**` DEĞİL) **NE + NEDEN-kanıt** olarak yaz ve DEVAM et. **0 ya da ≥2 aday → yine
+  DUR + sor.** Bu "makul varsayım"a kapı DEĞİL — yalnız somut kod-kanıtlı tek-aday geçer. Mekanik +
+  format: `references/gap-protocol.md` §2b.
 - **Tek-tip in-place seam varsayımı (T4-sonrası).** Trigger / subscription / boundary'yi "ayrı
   dosya / farklı mekanik" diye işleme. T4-sonrası HEPSİ handler-gövdesiyle **aynı** desende:
   gen-owned `partial` + human `{X}.Logic.cs` (WriteIfAbsent, marker). Hepsini **in-place** doldur.
@@ -175,8 +181,12 @@ Doldurma-öncesi dört denetim (K1–K4); geçmeyen → **GAP → STOP** (Faz 4'
 
 **Amaç:** Gate geçen seam'in gövdesini **kanonik sırada** yaz — yerinde (in-place).
 - **Çözüm kademesi (T5.2):** gap varsa ilk eşleşen otomatik uygulanır (rapora yazılır, sessiz
-  değil): (1) üreteç-policy → (2) kayıtlı çözüm → (3) unsupported-bilinen → (4) hiçbiri ⇒ DUR+sor.
-  Bu kademenin mekaniği **T5.2**; buraya atıf yeter.
+  değil): (1) üreteç-policy → (2) kayıtlı çözüm → (3) unsupported-bilinen → (3b) codebase-grounded
+  KESİN inference → (4) hiçbiri ⇒ DUR+sor. Bu kademenin mekaniği **T5.2**; buraya atıf yeter.
+- **Codebase-grounded eşleme → `ASSUMPTIONS.md` (rung-3b):** contract'ta açık olmayan bir eşlemeyi
+  mevcut codebase **tek-aday-deterministik** çözdüyse, gövdeyi yazmadan önce app-kökündeki
+  `ASSUMPTIONS.md`'ye ilgili op başlığı altına **NE + NEDEN-kanıt (`dosya:sembol`) + GÜVEN** maddesini
+  yaz, sonra devam et. **0/≥2 aday → DUR+sor** (ledger'a yazma). Format + iki-bant ayrımı: gap-protocol §2b.
 - **In-place fill:** arketip playbook'unun (T5.3) kanonik sırasında üyeleri bağla; gövdeyi
   **`{X}.Logic.cs` human-seam'ine** yaz (`WriteIfAbsent` — boş-marker substring'i `doldurulacak`
   taşıyan seam'e bir kez). `gen/**`'e ASLA dokunma. Kanonik sıra descriptor'dan
@@ -212,6 +222,8 @@ söylemez; reward-hacking riski).
 - Doldurulan seam'ler (arketip + uygulanan kanonik sıra).
 - Gate sonuçları (K1–K4: geçti/STOP), uygulanan çözüm-kademesi kararları (üreteç-policy / kayıtlı
   çözüm — her biri açıkça, sessiz değil).
+- **`ASSUMPTIONS.md` varsayımları (rung-3b):** codebase-grounded eşlemeler (NE + NEDEN-kanıt) — varsa
+  madde madde özetle; insanın denetlemesi için ledger dosyasına işaret et.
 - Bilinmeyen gap → DUR olan seam'ler + kullanıcıya sorulan + (tekrar-edilebilirse) kayıt önerisi.
 - Verify sonuçları (build exit, conformance oracle).
 - v1 kapsam-dışı ertelenen seam'ler (trigger/subscription/boundary) — açıkça.

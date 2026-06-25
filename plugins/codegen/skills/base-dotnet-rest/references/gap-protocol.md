@@ -85,6 +85,7 @@ deterministik sıralamasıdır:
 | **1. Üreteç-policy** | `build-report.policies` (`{name: decision}`) + inline `ponytail:`/`§8` yönergeleri | Üretecin **tanımlı yöntemi**. Gap değil, yönerge. Eşleşen policy varsa **otomatik uygula + rapora yaz**. |
 | **2. Kayıtlı çözüm** | proje-yanı registry (`.dsl/gap-policies/<pkg>@<ver>/`), paket+sürüm scope'lu | Daha önce öğretilmiş çözüm (gap-signature eşleşmesi). Varsa **otomatik uygula + rapora yaz**. |
 | **3. Unsupported = bilinen boşluk** | K4 sinyali (`build-report.constructs[unsupported]`) | Üretecin **bildirdiği** bilinen boşluk. Registry'de karşılığı varsa uygula; yoksa dispozisyonlu bekletilir (sessiz geçilmez). |
+| **3b. Codebase-grounded inference** | mevcut codebase yapısı (FK/nav/tip) — §2b | Eşleme contract'ta açık değil ama codebase **tek-aday-deterministik** çözüyorsa → `ASSUMPTIONS.md`'ye kaydet + **DEVAM**. 0/≥2 aday → rung-4. |
 | **4. Hiçbiri eşleşmez** | — | **BİLİNMEYEN GAP → DUR + sor** (Faz 4b). **improvise YOK.** |
 
 **Rung-1 örnek (üreteç-policy otomatik):** K1, bir validation input'unun "store"a bağlanmasını sorarsa ve
@@ -94,6 +95,51 @@ kullan** kararını otomatik uygular, **rapora yazar**. Bu bir yönergedir, bili
 **Çakışma/öncelik:** rung-1 → rung-4 sırasıyla **ilk eşleşen** kazanır; alt rung'lara bakılmaz. Kademe
 yukarıdan aşağı taranır; ilk eşleşmede durur. (Registry merge önceliği = proje-öğretili ⊕ paket-seed,
 çakışmada **proje kazanır** — detay T5.4/K4.)
+
+---
+
+## 2b. Codebase-grounded KESİN inference → Varsayım Defteri (ASSUMPTIONS.md)  [iki-bant]
+
+Bazı bağlamalar (özellikle K1 alan/kavram eşlemesi) contract'ta **açık değildir** ama **mevcut
+codebase** yapısal cevabı verir — ör. iş-dili "Müşteri" hangi entity'ye düşer, Customer ile User
+nasıl ilişkilenir. Bu, rung-1/2/3'ün **tanımlı yöntemi** değildir; ama körü körüne rung-4 DUR da
+değildir. **Bu bant rung-4'ten ÖNCE denenir:** rung-1→3 eşleşmediyse, DUR'a düşmeden "codebase tek
+bir somut yola indirgiyor mu?" bak. İki-bant kural:
+
+- **KESİN (tek-aday, deterministik) → KAYDET + DEVAM.** Codebase eşlemeyi tam **bir** somut yapısal
+  yola indirgiyorsa (tam **bir** FK / tam **bir** navigation property / tam **bir** aday tip),
+  varsayımı **`ASSUMPTIONS.md`**'ye yaz (format aşağıda) ve gövdeyi yaz. Kanıt = somut kod artefaktı
+  (`dosya:sembol`), his değil.
+- **BELİRSİZ (0 veya ≥2 aday) → rung-4 DUR + sor.** Codebase **hiç** aday vermiyorsa (PoC `creditLimit`
+  gibi — hiçbir yere bağlanmıyor) **ya da ≥2 aday** varsa (hangi yol doğru belirsiz) → **DUR + sor**.
+  Ledger'a "varsayım" diye yazma — bu bir **SORU**'dur, varsayım değil.
+
+> **"makul varsayım"a kapı DEĞİL.** Yalnız **tek-aday-deterministik** kanıt bu bandı geçer; sıfır-aday
+> (bağlanamayan input) ve çok-aday (belirsiz) yine rung-4 DUR eder. PoC hatası (`creditLimit` sessiz
+> "decimal varsay") bu bantta da engellenir: codebase hiç aday vermez → DUR.
+
+> **Yalnız gate-tetikli DEĞİL — fill-time'da da geçerli.** Bu bant K1–K4 gate'inin gap çıkarmasını
+> BEKLEMEZ. K1–K4 **mekanik** denetimlerdir; oysa asıl vaka (iş-dili "Müşteri" → hangi alan/entity)
+> bir **semantik** kavram→alan eşlemesidir ve adlı `Rule_N` input'u olarak gate'e hiç yüzeye çıkmayabilir.
+> Kural tek davranıştır: **Faz-4 fill sırasında contract'ta-açık-olmayan bir kavram→alan/entity
+> eşlemesini codebase'den TÜRETTİĞİN HER AN** iki-bant uygula (tek-aday→kaydet+devam, 0/≥2→DUR). "rung-3b"
+> yalnız kademedeki yeridir; tetik gate değil, **eşlemeyi yaptığın an**.
+
+**Varsayım Defteri (`ASSUMPTIONS.md`) — konum + format:**
+- **Konum:** target app **kökünde** `ASSUMPTIONS.md` (insan-tree; `gen/**`'e ASLA yazma — altın kural).
+  Kalıcı insan-sahibi review artefaktı; her fill-run'da ilgili op başlığı altına madde eklenir.
+- **Format (madde başına: NE + NEDEN-kanıt + GÜVEN):**
+```
+## {Op}
+- NE: <ne varsayıldı/eşlendi — ör. "Müşteri → User entity, UserId ile">
+  NEDEN: <somut kod kanıtı — ör. "Order.UserId FK (gen/Billing/Entities.g.cs); tek aday">
+  GÜVEN: tek-aday (deterministik)
+```
+
+**Örnek (iki-bant ayrımı):** Op `CreateOrder`, kural "müşteri kendi siparişini görür". Contract
+`customerId` demiyor; codebase'de **tek** yapısal yol `Order.UserId` FK → KESİN: `ASSUMPTIONS.md`'ye
+"Müşteri → User (UserId FK, Entities.g.cs; tek aday)" yaz + filtreyi `UserId` ile kur. Eğer hem
+`Order.UserId` hem `Order.CustomerId` olsaydı (≥2 aday) → ledger'a yazma, **DUR + sor**.
 
 ---
 
@@ -133,6 +179,8 @@ Her kademe kararı **rapora yazılır** (Faz 6'da sunulur), sessizce uygulanmaz:
 - **Rung-1 (üreteç-policy):** hangi policy, hangi karar (ör. `dedup-store: in-memory → mevcut store`).
 - **Rung-2 (kayıtlı çözüm):** hangi gap-signature eşleşti, hangi resolution uygulandı.
 - **Rung-3 (unsupported):** hangi construct bildirilen-bilinen boşluk olarak dispozisyonlandı.
+- **Rung-3b (codebase-grounded inference):** hangi op'ta hangi eşleme `ASSUMPTIONS.md`'ye kaydedildi
+  (NE + NEDEN-kanıt) — Faz 6 raporunda ledger maddeleri özetlenir.
 - **Rung-4 (DUR):** hangi seam DUR oldu, kullanıcıya ne soruldu, (varsa) hangi kayıt önerildi.
 
 ---
@@ -166,6 +214,9 @@ Bu senaryo PoC hatasının (sessiz "decimal varsay") tam olarak engellendiği ka
 - **Bilinmeyen gap'i yorumda işaretleyip DEVAM ETME** → "yorum ≠ STOP". Gerçek STOP = yazımı durdur, sun, sor.
 - **Bilinmeyen boşlukta IMPROVISE ETME** ("makul varsayım" / "decimal varsay" / tip-uydur) → DUR + sor.
 - **Kayıtlı/policy çözümü SESSİZ uygulama** → her kademe kararı rapora yazılır; yeni kaydı kullanıcıya öner.
+- **Codebase ≥2 aday / 0 aday iken "tek-aday" diye `ASSUMPTIONS.md`'ye yazıp DEVAM etme** → bu, §2b
+  iki-bant kuralını delip "makul varsayım"a döner. Tek-aday-deterministik DEĞİLse → rung-4 DUR + sor.
+- **Codebase-grounded eşlemeyi SESSİZ yapma** → tek-aday olsa bile ledger'a yazılmadan geçme; kayıt zorunlu.
 - **`silentDrops` JSON alanı ARAMA** → yoktur; silent-drop sinyali = exit≠0 / `status=="unsupported"`.
 - **Aile-kapısı K1/K2'sini bu dosyaya gömme** → o T3.2 (bağımsız zorlama). Bu dosya paket-içi erken-DUR.
 - **Kademe sırasını atlama** → rung-1→4 yukarıdan tara, ilk eşleşende dur; alt rung'a düşmeden DUR etme.

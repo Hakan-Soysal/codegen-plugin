@@ -1,5 +1,5 @@
 {
-  "skill_name": "filler",
+  "skill_name": "base-dotnet-rest",
   "evals": [
     {
       "id": 1,
@@ -20,6 +20,20 @@
       "name": "bilinen-gap-dedup-store-in-memory-otomatik-cozum-rung1",
       "prompt": "Statik üretilmiş projede bir op'un seam'ini dolduracağım. Bir Validation_N/Rule_N input'u bir 'store'a (dedup deposu) bağlanmayı soruyor. build-report.policies içinde 'dedup-store: in-memory' policy'si tanımlı. Üretimi başlat.",
       "expected_output": "Otomatik çözüm (ladder rung-1) — DUR YOK, improvise YOK. Faz3 gap-gate K1 input'un store'a bağlanmasını sorar → bir gap sinyali. Çözüm kademesi yukarıdan taranır: rung-1 üreteç-policy → build-report.policies.dedup-store == 'in-memory' EŞLEŞİR. Bu üretecin tanımlı yöntemidir, bilinmeyen gap DEĞİLDİR. Rung-1 OTOMATİK uygulanır: 'mevcut in-memory store'u kullan' kararı verilir, gövde o store'a bağlanarak yazılır (DUR olmaz, alt rung'lara bakılmaz — ilk eşleşen kazanır). Karar RAPORA YAZILIR (sessiz değil): Faz6'da 'rung-1 (üreteç-policy): dedup-store: in-memory → mevcut store'. Sonra Faz5 verify-loop normal koşar (build exit 0 + conformance PASS). Bu senaryo 'tanımlı yöntem varsa onu kullan' ilkesinin pozitif kanıtıdır; bilinmeyen gap olmadığı için kullanıcıya SORULMAZ.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "codebase-grounded-tek-aday-musteri-user-eslemesi-kaydet-devam-rung3b",
+      "prompt": "Statik üretilmiş projede CreateOrder seam'ini dolduracağım. İş kuralı (is-analizi §6): 'müşteri yalnız kendi siparişini görür'. Contract 'customerId' demiyor; ama gen/Sales/Entities.g.cs'te Order entity'sinin TEK bir sahiplik FK'i var: Order.UserId (Customer↔User başka yoldan bağlı değil — tek aday). Üretimi başlat.",
+      "expected_output": "Codebase-grounded KESİN inference → ASSUMPTIONS.md'ye kaydet + DEVAM (ladder rung-3b) — DUR YOK, improvise YOK. Faz3 gap-gate: 'müşteri' kavramının hangi alana düştüğü contract'ta açık değil → bir bağlama sinyali. Çözüm kademesi: rung-1 üreteç-policy YOK, rung-2 kayıtlı çözüm YOK, rung-3 unsupported DEĞMİYOR → rung-4'e düşmeden rung-3b (codebase-grounded inference, §2b) denenir: mevcut codebase eşlemeyi TEK-ADAY-deterministik çözüyor mu? Order.UserId TEK FK (tam bir aday) → KESİN. İKİ-BANT kuralı KESİN bandına düşer: app-kökündeki ASSUMPTIONS.md'ye CreateOrder başlığı altına madde yazılır — NE: 'Müşteri → User entity, UserId ile eşlendi'; NEDEN: 'Order.UserId FK (gen/Sales/Entities.g.cs); tek aday'; GÜVEN: tek-aday (deterministik). gen/** DEĞİL, insan-tree (app-kökü). Sonra gövde DEVAM eder: query filtresi UserId == currentUser ile kurulur. Karar RAPORA YAZILIR (Faz6: rung-3b ledger maddesi özetlenir, insan denetimine işaret). Faz5 verify normal. Bu senaryo 'somut kod-kanıtlı tek-aday → kaydet+devam' bandının pozitif kanıtıdır; bilinmeyen gap olmadığı için DUR edilmez. ASLA: ledger'a yazmadan sessiz eşleme.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "codebase-grounded-coklu-aday-belirsiz-DUR-sor-ledger-yazma",
+      "prompt": "Statik üretilmiş projede CreateOrder seam'ini dolduracağım. İş kuralı: 'müşteri yalnız kendi siparişini görür'. Contract 'customerId' demiyor; ama gen/Sales/Entities.g.cs'te Order entity'sinde HEM Order.UserId HEM Order.CustomerId FK'i var (iki olası sahiplik yolu — hangisi 'müşteri' belirsiz). Üretimi başlat.",
+      "expected_output": "BELİRSİZ (≥2 aday) → rung-4 DUR + kullanıcıya sor — ledger'a YAZMA, improvise YASAK. Faz3 gap-gate: 'müşteri' hangi alana düşer açık değil → bağlama sinyali. Çözüm kademesi: rung-1/2/3 YOK → rung-3b (codebase-grounded inference, §2b) denenir: codebase TEK-ADAY-deterministik mi? HAYIR — Order.UserId ve Order.CustomerId İKİ aday (≥2). İki-bant kuralı BELİRSİZ bandına düşer → rung-3b GEÇMEZ → rung-4: BİLİNMEYEN GAP → DUR + sor. Gövde YAZILMAZ; ASSUMPTIONS.md'ye 'tek-aday' diye YAZILMAZ (bu bir SORU'dur, varsayım değil — §2b iki-bant kuralını delmek YASAK). Gap KESİN sunulur: contract ne diyor ('müşteri kendi siparişini görür'), ne belirsiz ('UserId mi CustomerId mi — iki sahiplik FK aday'), neden sadık ilerlenemez (çok-aday → tek doğru yol uydurulamaz). Kullanıcıdan TANIM+EYLEM alınır. Bu senaryo 'çok-aday iken kaydet+devam etme' anti-pattern'inin engellendiği negatif kanıt-noktasıdır. expected_output = DUR (kaydet+devam DEĞİL).",
       "files": []
     }
   ]
