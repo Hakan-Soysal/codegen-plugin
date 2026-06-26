@@ -205,6 +205,7 @@ arketipi belirle (taksonomi §B.3):
 | Trigger-inbound | `.Trigger.g.cs` (`IHostedService`) |
 | Subscription-consumer | `Subscriptions.g.cs` consumer |
 | Boundary-client | `I{External}Client` stub |
+| Test-arrange | `tests/src/**/*.Logic.cs` seam (Arrange marker) |
 
 Arketipler birleşebilir (ör. Command + saga + idempotent). Birden çok arketip imzası varsa
 hepsini uygula (kanonik sıra çakışmayı çözer).
@@ -255,6 +256,24 @@ Doldurma-öncesi dört denetim (K1–K4); geçmeyen → **GAP → STOP** (Faz 4'
   yok). **v1 kapsam (B.6):** yalnız IN-PLACE seam'i olan arketipler (Command/Query ailesi);
   trigger/subscription/boundary techgen temiz human-seam emit edene kadar **açıkça ertelenmiş**
   (sessiz değil).
+
+### Faz 4 — `test-arrange` doldurma kuralı (ARRANGE-only seam)
+
+`test-arrange` arketipi (`tests/src/**/*.Logic.cs` seam, `Arrange{Name}` marker) **yalnız ARRANGE
+gövdesini** doldurur — diğer seam'lerle aynı in-place mekanik (`WriteIfAbsent` + `doldurulacak`
+marker), ama **scope ARRANGE ile sınırlı**:
+
+- **Yalnız `Arrange{Name}` partial gövdesini doldur** — temiz-data hazırlığı + ön-gereksinim
+  (prereq) payload'ları. Bu seam'in tek işi, test'in çalışması için tutarlı başlangıç state'ini kurmak.
+- **ASSERT, üretici-sahibi (owned) `.g.cs`'tedir — ASLA dokunma/yazma.** Test'in assertion'ları
+  generator tarafından `tests/gen/**/*.g.cs` içinde üretilir; LLM bunları yazarsa totoloji (kendi
+  ürettiğini kendi doğrular) → anti-circularity ihlali (Altın kural A3). Seam yalnız ARRANGE.
+- **Kapı 0 (access-coverage) burada da geçerli:** ARRANGE kurduğu state, `manifest.json
+  operations[].access` yazma-kümesiyle (write-set) **tutarlı** olmalı — başlangıç state'i, test'in
+  kapsadığı op'ların persist/effect yüzeyini karşılar. `operations.json`'un dar access'i kaynak DEĞİL.
+- **Ön-gereksinim payload'ları yalnız `Single`:** üretici, çoklu-/sıfır-creator (`Ambiguous`/`Missing`)
+  prereq'li test'lere **seam emit etmez** (zaten DUR-marker'ladı) → o test'ler için doldurulacak ARRANGE
+  yoktur. Yalnız tek-creator (`Single`) ön-gereksinimlerin payload'ını kur.
 
 ---
 
