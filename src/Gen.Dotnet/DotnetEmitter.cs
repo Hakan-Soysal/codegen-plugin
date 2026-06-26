@@ -216,10 +216,20 @@ public static class DotnetEmitter
 
         void EmitOne(string scope, string name, IReadOnlyList<string> runSeq, IReadOnlyList<PrereqStep> prereqs, IReadOnlyList<string> writeSet)
         {
-            if (!AllSinglePrereqs(prereqs)) return;   // Ambiguous/Missing → iskelet emit ETME (T-3.2 DUR-marker)
+            if (!AllSinglePrereqs(prereqs))
+            {
+                // Q5=DUR: belirsiz/eksik ön-gereksinim sessizce çözülmez (creator SEÇİLMEZ). No-silent-loss →
+                // iskelet/seam emit ETME, bunun yerine unsupported işaretle; reason offending entity+Kind içerir.
+                var offenders = string.Join(", ", prereqs
+                    .Where(p => p.Kind != PrereqKind.Single)
+                    .Select(p => $"{p.Entity} ({p.Kind})"));
+                report.Unsupported("test-prereq", $"{scope}_{name}", $"ön-gereksinim belirsiz/eksik: {offenders}");
+                return;   // T-3.2 DUR-marker
+            }
             var scopeDir = Path.Combine(testsGen, scope);
             Directory.CreateDirectory(scopeDir);      // WriteAlways dizin oluşturmaz → burada hazırla
             WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById, gm));
+            report.Realized("test", $"{scope}_{name}");   // T-3.1: yalnız emit edilen (all-Single) testler realized; id-şeması §10 (Process_/OrphanFlow_/OrphanOp_)
             // ARRANGE human-seam (T-2.3): owned iskeletin DECLARE ettiği `partial void Arrange{name}()` gövdesi.
             // WriteIfAbsent → insan/LLM dolumu (M4 test-arrange) tekrar-üretimde EZİLMEZ. Yalnız ARRANGE; ASSERT owned'da.
             var seamScopeDir = Path.Combine(testsSrc, scope);
