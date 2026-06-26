@@ -1,0 +1,41 @@
+{
+  "run_metadata": {
+    "plan_folder": "tasks/process-test-gen",
+    "plan_file": "tasks/process-test-gen/IMPLEMENTATION-PLAN.md",
+    "project_root": "/Users/hakansoysal/Desktop/ClaudeCode Denemeler/CoreTemplate1",
+    "branch": "feat/process-test-generation",
+    "parallelism": "milestone-by-milestone",
+    "retry_limit": 3,
+    "started_at": "2026-06-26",
+    "archive_root": "tasks/process-test-gen/pm-runs"
+  },
+  "open_observations": [
+    "[SCOPE: architectural] Anti-circularity: test ASSERT generator-owned (tests/gen/**.g.cs, WriteAlways); ARRANGE human-seam (tests/src/**.Logic.cs, WriteIfAbsent). Executor NEVER writes assertions into seam, never moves ASSERT into seam.",
+    "[SCOPE: architectural] Determinism: all generator output OrderBy(StringComparer.Ordinal); never iterate Dictionary/HashSet into emitted output; topo-sort needs ordinal tie-break.",
+    "[SCOPE: architectural] Access authority: write-set/effect source = manifest.access {reads,creates,updates,deletes} (4-key, OperationJson.Access); NEVER operations.json/ContractAccess {reads,writes}.",
+    "[SCOPE: process] Locked decisions: Q1 xUnit project; Q2 conformance & process-tests independent (all 23, no dedupe); Q3 field-level ASSERT from effects (ContractEffect.Expr/Text); Q4 Go later (DotnetEmitter only); Q5 ambiguous/missing prereq -> DUR-marker Unsupported, never auto-pick creator.",
+    "[SCOPE: environmental] BUILD COMMANDS: whole solution = `dotnet build Gen.slnx` (root). `dotnet build src` ERRORS MSB1003 (no solution under src/). Gen.Core only = `dotnet build src/Gen.Core/Gen.Core.csproj`. Throwaway .NET file-based runners need `#:property JsonSerializerIsReflectionEnabledByDefault=true` (Gen.Core disables reflection JSON by default); delete runner+bin/obj after.",
+    "[SCOPE: code-convention; lives-with: Contract.cs] Additive record params MUST be optional (`= null`) so positional callers (e.g. tests/Gen.Tests/JoinTests.cs) keep compiling. T-1.1-fix applied this to ContractFile.Processes/Flows.",
+    "[SCOPE: environmental] ExprNodeConverter IS registered in src/Gen.Core/Json.cs (Loader uses Json.Options) -> ContractEffect.Expr deserializes as ExprNode (e.g. calculate 'iptal' -> LiteralNode). T-2.2 can render via ExprBuild."
+  ],
+  "tasks": {
+    "T-1.0": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS"},
+    "T-1.1": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS", "note": "T-1.1-fix added = null defaults to ContractFile.Processes/Flows (positional caller regression)"},
+    "T-1.2": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS"},
+    "T-1.3": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS"},
+    "T-1.4": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS"},
+    "T-1.5": {"status": "completed", "retries": 0, "milestone": "M1", "critical": true, "verdict": "PASS"},
+    "T-2.1": {"status": "pending", "retries": 0, "milestone": "M2", "critical": true, "deps": ["T-1.5"]},
+    "T-2.2": {"status": "pending", "retries": 0, "milestone": "M2", "critical": true, "deps": ["T-2.1"]},
+    "T-2.3": {"status": "pending", "retries": 0, "milestone": "M2", "critical": true, "deps": ["T-2.1"]},
+    "T-2.4": {"status": "pending", "retries": 0, "milestone": "M2", "critical": false, "deps": ["T-2.1"]},
+    "T-3.1": {"status": "pending", "retries": 0, "milestone": "M3", "critical": true, "deps": ["T-2.1"]},
+    "T-3.2": {"status": "pending", "retries": 0, "milestone": "M3", "critical": true, "deps": ["T-2.1", "T-1.4"]},
+    "T-3.3": {"status": "pending", "retries": 0, "milestone": "M3", "critical": true, "deps": ["T-2.1"]},
+    "T-4.1": {"status": "pending", "retries": 0, "milestone": "M4", "critical": true, "deps": ["T-2.3"]},
+    "T-4.2": {"status": "pending", "retries": 0, "milestone": "M4", "critical": true, "deps": ["T-4.1"]},
+    "T-4.3": {"status": "pending", "retries": 0, "milestone": "M4", "critical": false, "deps": ["T-4.1"]},
+    "T-5.1": {"status": "pending", "retries": 0, "milestone": "M5", "critical": true, "deps": ["T-2.4", "T-3.1", "T-3.2", "T-3.3"]},
+    "T-5.2": {"status": "pending", "retries": 0, "milestone": "M5", "critical": true, "deps": ["T-5.1", "T-4.1"]}
+  }
+}

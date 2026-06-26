@@ -1,0 +1,2986 @@
+{
+    "operations": [
+        {
+            "id": "AtaEgitmen",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "assigns",
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici seansa egitmen atar (assignedSessions iliskisi). Egitmen bundan sonra kendi seanslarini ve katilimcilarini gorur.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "Session"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "SeansPlanlama"
+            ],
+            "processes": [
+                "TakvimSureci"
+            ],
+            "domain": "Takvim"
+        },
+        {
+            "id": "CancelSessionAppointments",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "cancels",
+                "ownership": "all",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Iptal edilen seansin randevulari iptal edilir; rezerve haklar iade edilir; uyeler bilgilendirilir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'iptal'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "iptal"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "SeansIptalBildirimi",
+                    "recipient": [
+                        "Appointment",
+                        "owner"
+                    ]
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "SeansPlanlama"
+            ],
+            "processes": [],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "CozDondurma",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "resumes",
+                "ownership": "all",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Dondurma suresi dolan paketi otomatik 'aktif'e cevirir.",
+            "schedule": {
+                "unit": "day",
+                "time": "03:00"
+            },
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Package",
+                        "status"
+                    ],
+                    "text": "'aktif'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "aktif"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "GuncelleDersTipi",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "updates",
+                "ownership": "any",
+                "resource": "ClassType"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "ClassType"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "DersTipiYonetimi"
+            ],
+            "processes": [],
+            "domain": "Tanimlamalar"
+        },
+        {
+            "id": "GuncelleSeans",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "updates",
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Henuz baslamamis seansin tarih/saatini gunceller.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'planli'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "planli"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "Session"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "SeansPlanlama"
+            ],
+            "processes": [
+                "TakvimSureci"
+            ],
+            "domain": "Takvim"
+        },
+        {
+            "id": "HediyeHak",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "awards",
+                "ownership": "any",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici bir uyenin paketine hediye seans hakki ekler (ilgili ders tipi kaleminin kalan seansi artirilir). Ozellikle gec iptal/no-show telafisi icin.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketIslemleri"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "IadePaket",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "refunds",
+                "ownership": "any",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici paketi iade eder; kalan haklar sifirlanir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Package",
+                        "status"
+                    ],
+                    "text": "'iade'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "iade"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "PaketIadeBildirimi",
+                    "recipient": [
+                        "Package",
+                        "owner"
+                    ]
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketIslemleri"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "IptalRandevu",
+            "kind": "command",
+            "signature": {
+                "actor": "Member",
+                "verb": "cancels",
+                "ownership": "own",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Seans baslangicina kalan sure ders tipinin cezasiz iptal suresinden fazlaysa: zamaninda iptal, hak ve yer iade.\nAz ise: gec iptal, hak yanar, yer yine bosalir.\nHer iki halde de seansin bekleme listesine 'yer acildi' bildirimi gider (perform).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'iptal'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "iptal"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "perform",
+                    "target": "YerAcildiBildir"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "RandevuIptal"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "IptalSeans",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "cancels",
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Seans iptal edilince bagli randevular iptal olur, rezerve haklar iade edilir, uyeler bilgilendirilir (perform).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'planli'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "planli"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Session",
+                        "status"
+                    ],
+                    "text": "'iptal'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "iptal"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "perform",
+                    "target": "CancelSessionAppointments"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Session"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "SeansPlanlama"
+            ],
+            "processes": [
+                "TakvimSureci"
+            ],
+            "domain": "Takvim"
+        },
+        {
+            "id": "IsaretleGeldi",
+            "kind": "command",
+            "signature": {
+                "actor": "Instructor",
+                "verb": "completes",
+                "ownership": "sessionAppointments",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Egitmen kendi seansinin onayli randevusunu 'geldi' isaretler; kullanim kaydi olusur (hak zaten rezerve/dusulu).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'onaylandi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "onaylandi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'tamamlandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "tamamlandi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "create",
+                    "target": "UsageRecord",
+                    "source": "Appointment"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment",
+                    "UsageRecord"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "Yoklama"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "IsaretleGelmedi",
+            "kind": "command",
+            "signature": {
+                "actor": "Instructor",
+                "verb": "misses",
+                "ownership": "sessionAppointments",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Egitmen 'gelmedi' isaretler; randevu kacirildi, hak yanar (rezerve, iade yok).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'onaylandi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "onaylandi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'kacirildi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "kacirildi"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "Yoklama"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "KapatSuresiDolanPaket",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "expires",
+                "ownership": "all",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Bitis tarihi gecen aktif paketi 'suresi doldu' yapar; kullanilmayan haklar breakage olarak rapora kalir.",
+            "schedule": {
+                "unit": "day",
+                "time": "02:00"
+            },
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Package",
+                        "status"
+                    ],
+                    "text": "'suresidoldu'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "suresidoldu"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "KaydetUye",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "creates",
+                "ownership": "any",
+                "resource": "MemberProfile"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici yeni uye kaydeder (ad, iletisim, gelis kaynagi).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "MemberProfile",
+                        "status"
+                    ],
+                    "text": "'aktif'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "aktif"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "MemberProfile"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "UyelikPaketSatis"
+            ],
+            "processes": [
+                "UyelikPaketSureci"
+            ],
+            "domain": "UyelikPaket"
+        },
+        {
+            "id": "KesFis",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "creates",
+                "ownership": "any",
+                "resource": "Receipt"
+            },
+            "delegation": null,
+            "target": null,
+            "source": {
+                "ownership": "any",
+                "resource": "Package"
+            },
+            "recipient": null,
+            "description": "Pakete istinaden basit fis/fatura bilgisi (tutar, odeme yontemi notu). Odeme entegrasyonu yok. Istege baglidir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "Receipt"
+                ],
+                "reads": [
+                    "Package"
+                ]
+            },
+            "flows": [
+                "UyelikPaketSatis"
+            ],
+            "processes": [
+                "UyelikPaketSureci"
+            ],
+            "domain": "UyelikPaket"
+        },
+        {
+            "id": "ListAcikSeanslar",
+            "kind": "query",
+            "signature": {
+                "actor": "Member",
+                "verb": "lists",
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Session",
+                    "startsAt"
+                ],
+                "direction": "ascending"
+            },
+            "limit": null,
+            "guards": [
+                {
+                    "id": "when:0",
+                    "kind": "when",
+                    "role": "result-filter",
+                    "text": "Session.status = 'planli'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "Session",
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "planli"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Session"
+                ]
+            },
+            "flows": [
+                "RandevuAlma"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "ListPaketlerim",
+            "kind": "query",
+            "signature": {
+                "actor": "Member",
+                "verb": "lists",
+                "ownership": "own",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Package",
+                    "endsAt"
+                ],
+                "direction": "ascending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Package"
+                ]
+            },
+            "flows": [
+                "PaketlerimGoruntule"
+            ],
+            "processes": [
+                "UyelikPaketSureci"
+            ],
+            "domain": "UyelikPaket"
+        },
+        {
+            "id": "ListPaketTalepleri",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "any",
+                "resource": "PackageRequest"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "when:0",
+                    "kind": "when",
+                    "role": "result-filter",
+                    "text": "PackageRequest.status = 'talepedildi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "PackageRequest",
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "talepedildi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "PackageRequest"
+                ]
+            },
+            "flows": [
+                "PaketTalepDegerlendir"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "ListSeanslarim",
+            "kind": "query",
+            "signature": {
+                "actor": "Instructor",
+                "verb": "lists",
+                "ownership": "assignedSessions",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Session",
+                    "startsAt"
+                ],
+                "direction": "ascending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Session"
+                ]
+            },
+            "flows": [
+                "SeanslarimGoruntule"
+            ],
+            "processes": [
+                "TakvimSureci"
+            ],
+            "domain": "Takvim"
+        },
+        {
+            "id": "OlusturPaket",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "creates",
+                "ownership": "any",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": "Member",
+            "description": "Yonetici bir uye icin paket acar; ice farkli ders tiplerinden hak kalemleri (kalem = ders tipi + seans adedi) ve baslangic-bitis tarihi koyar.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Package",
+                        "status"
+                    ],
+                    "text": "'aktif'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "aktif"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "UyelikPaketSatis"
+            ],
+            "processes": [
+                "UyelikPaketSureci"
+            ],
+            "domain": "UyelikPaket"
+        },
+        {
+            "id": "OlusturPaketTalebi",
+            "kind": "command",
+            "signature": {
+                "actor": "Member",
+                "verb": "creates",
+                "ownership": "own",
+                "resource": "PackageRequest"
+            },
+            "delegation": null,
+            "target": {
+                "ownership": "own",
+                "resource": "Package"
+            },
+            "source": null,
+            "recipient": null,
+            "description": "Uye kendi aktif paketi icin dondurma veya uzatma talebi olusturur (tur, istenen sure).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "PackageRequest",
+                        "status"
+                    ],
+                    "text": "'talepedildi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "talepedildi"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package",
+                    "PackageRequest"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketTalep"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "OlusturRandevu",
+            "kind": "command",
+            "signature": {
+                "actor": "Member",
+                "verb": "creates",
+                "ownership": "own",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": {
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "source": null,
+            "recipient": null,
+            "description": "Onkosul: uyenin o seansin ders tipinde kalan hakki > 0 olmali (yoksa engellenir).\nSonuc durumu: kontenjan doluysa 'beklemede'; kontenjan var + ders tipi otomatik onayli ise 'onaylandi'; kontenjan var + ders tipi yonetici onayi istiyorsa 'onaybekliyor'.\n'onaylandi'/'onaybekliyor' durumlarinda bir kontenjan ve bir hak rezerve edilir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'onaylandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "onaylandi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'onaybekliyor'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "onaybekliyor"
+                    },
+                    "condition": {
+                        "text": "ClassType.approvalType = 'yonetici'",
+                        "ast": {
+                            "node": "cmp",
+                            "op": "=",
+                            "left": {
+                                "path": [
+                                    "ClassType",
+                                    "approvalType"
+                                ]
+                            },
+                            "right": {
+                                "kind": "string",
+                                "value": "yonetici"
+                            }
+                        }
+                    }
+                },
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'beklemede'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "beklemede"
+                    },
+                    "condition": {
+                        "text": "Session.remaining = 0",
+                        "ast": {
+                            "node": "cmp",
+                            "op": "=",
+                            "left": {
+                                "path": [
+                                    "Session",
+                                    "remaining"
+                                ]
+                            },
+                            "right": {
+                                "kind": "number",
+                                "value": 0
+                            }
+                        }
+                    }
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment",
+                    "Session"
+                ],
+                "reads": [
+                    "ClassType"
+                ]
+            },
+            "flows": [
+                "RandevuAlma"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "OlusturSeans",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "creates",
+                "ownership": "any",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": {
+                "ownership": "any",
+                "resource": "ClassType"
+            },
+            "recipient": null,
+            "description": "Yonetici aktif bir ders tipinden seans uretir. Kalan kontenjan ders tipinin kapasitesinden gelir. Seans tarihi ders tipinin gecerlilik penceresinde olmalidir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Session",
+                        "status"
+                    ],
+                    "text": "'planli'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "planli"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Session",
+                        "remaining"
+                    ],
+                    "text": "Session.capacity",
+                    "expr": {
+                        "path": [
+                            "Session",
+                            "capacity"
+                        ]
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Session"
+                ],
+                "reads": [
+                    "ClassType"
+                ]
+            },
+            "flows": [
+                "SeansPlanlama"
+            ],
+            "processes": [
+                "TakvimSureci"
+            ],
+            "domain": "Takvim"
+        },
+        {
+            "id": "OnaylaBeklemeRandevu",
+            "kind": "command",
+            "signature": {
+                "actor": "Member",
+                "verb": "confirms",
+                "ownership": "own",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "'Yer acildi' bildirimini alan uye acilan yeri onaylar. Kontenjan hala varsa onaylanir (ilk onaylayan kapar); dolmussa reddedilir. Ders tipi yonetici onayi istiyorsa 'onaybekliyor' olur.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'beklemede'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "beklemede"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'onaylandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "onaylandi"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "BeklemeOnay"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "OnaylaPaketTalebi",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "approves",
+                "ownership": "any",
+                "resource": "PackageRequest"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici dondurma/uzatma talebini onaylar; uygulama System tarafindan yapilir (perform).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'talepedildi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "talepedildi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "PackageRequest",
+                        "status"
+                    ],
+                    "text": "'onaylandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "onaylandi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "PaketTalebiOnayBildirimi",
+                    "recipient": [
+                        "PackageRequest",
+                        "owner"
+                    ]
+                },
+                {
+                    "kind": "perform",
+                    "target": "UygulaPaketTalebi"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "PackageRequest"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketTalepDegerlendir"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "OnaylaRandevu",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "approves",
+                "ownership": "any",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici onayi gerektiren ders tipinde bekleyen randevuyu onaylar.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'onaybekliyor'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "onaybekliyor"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'onaylandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "onaylandi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "RandevuOnayBildirimi",
+                    "recipient": [
+                        "Appointment",
+                        "owner"
+                    ]
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "RandevuOnayYonetim"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "OtomatikKacirildi",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "misses",
+                "ownership": "all",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Egitmen/uye isaretlemeden zamani gecen 'onaylandi' randevulari 'kacirildi'ya ceker (hak yanar).",
+            "schedule": {
+                "unit": "hour",
+                "time": null
+            },
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'kacirildi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "kacirildi"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "PasiflestirDersTipi",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "deactivates",
+                "ownership": "any",
+                "resource": "ClassType"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Pasiflestirme = gecerlilik bitis tarihi atamak. Bu tarihten sonra yeni seans acilamaz; tarihten onceki seanslar aktif kalir (cascade yok).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [
+                    "ClassType"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "DersTipiYonetimi"
+            ],
+            "processes": [],
+            "domain": "Tanimlamalar"
+        },
+        {
+            "id": "RaporGelir",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "Receipt"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Receipt",
+                    "issuedAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Receipt"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporKatilimlarim",
+            "kind": "query",
+            "signature": {
+                "actor": "Instructor",
+                "verb": "lists",
+                "ownership": "sessionAppointments",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Appointment",
+                    "bookedAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Appointment"
+                ]
+            },
+            "flows": [
+                "Yoklama"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporKullanim",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "UsageRecord"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "UsageRecord",
+                    "enteredAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "UsageRecord"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporKullanimim",
+            "kind": "query",
+            "signature": {
+                "actor": "Member",
+                "verb": "lists",
+                "ownership": "own",
+                "resource": "UsageRecord"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "UsageRecord",
+                    "enteredAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "UsageRecord"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporPaketler",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Package",
+                    "endsAt"
+                ],
+                "direction": "ascending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Package"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporRandevular",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Appointment",
+                    "bookedAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Appointment"
+                ]
+            },
+            "flows": [
+                "RandevuOnayYonetim"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporRandevularim",
+            "kind": "query",
+            "signature": {
+                "actor": "Member",
+                "verb": "lists",
+                "ownership": "own",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Appointment",
+                    "bookedAt"
+                ],
+                "direction": "descending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Appointment"
+                ]
+            },
+            "flows": [
+                "RandevuIptal"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporSeanslar",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "Session"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": {
+                "path": [
+                    "Session",
+                    "startsAt"
+                ],
+                "direction": "ascending"
+            },
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "Session"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "RaporUyeler",
+            "kind": "query",
+            "signature": {
+                "actor": "Manager",
+                "verb": "lists",
+                "ownership": "all",
+                "resource": "MemberProfile"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [],
+            "access": {
+                "writes": [],
+                "reads": [
+                    "MemberProfile"
+                ]
+            },
+            "flows": [],
+            "processes": [],
+            "domain": "Raporlama"
+        },
+        {
+            "id": "ReddetPaketTalebi",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "rejects",
+                "ownership": "any",
+                "resource": "PackageRequest"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": null,
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'talepedildi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "talepedildi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "PackageRequest",
+                        "status"
+                    ],
+                    "text": "'reddedildi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "reddedildi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "PaketTalebiRedBildirimi",
+                    "recipient": [
+                        "PackageRequest",
+                        "owner"
+                    ]
+                }
+            ],
+            "access": {
+                "writes": [
+                    "PackageRequest"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketTalepDegerlendir"
+            ],
+            "processes": [
+                "PaketYonetimSureci"
+            ],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "ReddetRandevu",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "rejects",
+                "ownership": "any",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici randevuyu reddeder; rezerve hak ve yer iade edilir, bekleme listesine bildirim gider.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'onaybekliyor'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "onaybekliyor"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'reddedildi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "reddedildi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "send",
+                    "message": "RandevuRedBildirimi",
+                    "recipient": [
+                        "Appointment",
+                        "owner"
+                    ]
+                },
+                {
+                    "kind": "perform",
+                    "target": "YerAcildiBildir"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "RandevuOnayYonetim"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "SeansaGiris",
+            "kind": "command",
+            "signature": {
+                "actor": "Member",
+                "verb": "completes",
+                "ownership": "own",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Studyo girisinde uye o saatteki onayli randevusu icin 'geldim' (check-in) der. Yalnizca ders tipinin giris penceresi icinde kabul edilir. Kullanim kaydi olusur. (Login DEGIL; seansa fiziksel giris/yoklama.)",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [
+                {
+                    "id": "where:0",
+                    "kind": "where",
+                    "text": "status = 'onaylandi'",
+                    "ast": {
+                        "node": "cmp",
+                        "op": "=",
+                        "left": {
+                            "path": [
+                                "status"
+                            ]
+                        },
+                        "right": {
+                            "kind": "string",
+                            "value": "onaylandi"
+                        }
+                    }
+                }
+            ],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Appointment",
+                        "status"
+                    ],
+                    "text": "'tamamlandi'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "tamamlandi"
+                    },
+                    "condition": null
+                },
+                {
+                    "kind": "create",
+                    "target": "UsageRecord",
+                    "source": "Appointment"
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment",
+                    "UsageRecord"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "UyeGiris"
+            ],
+            "processes": [
+                "RandevuKatilimSureci"
+            ],
+            "domain": "RandevuKatilim"
+        },
+        {
+            "id": "TanimlaDersTipi",
+            "kind": "command",
+            "signature": {
+                "actor": "Manager",
+                "verb": "creates",
+                "ownership": "any",
+                "resource": "ClassType"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Yonetici yeni ders tipi olusturur (ekipman aletli/mat, tek/grup, kapasite, sure, onay turu, cezasiz iptal suresi, giris penceresi).",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "ClassType",
+                        "status"
+                    ],
+                    "text": "'aktif'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "aktif"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "ClassType"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "DersTipiYonetimi"
+            ],
+            "processes": [],
+            "domain": "Tanimlamalar"
+        },
+        {
+            "id": "UygulaPaketTalebi",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "freezes",
+                "ownership": "all",
+                "resource": "Package"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Talep tipine gore: dondurma -> durum 'donduruldu', bitis tarihi dondurma suresi kadar otelenir; uzatma -> durum 'aktif' kalir, yalniz bitis tarihi otelenir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "calculate",
+                    "target": [
+                        "Package",
+                        "status"
+                    ],
+                    "text": "'donduruldu'",
+                    "expr": {
+                        "kind": "string",
+                        "value": "donduruldu"
+                    },
+                    "condition": null
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Package"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "PaketTalepDegerlendir"
+            ],
+            "processes": [],
+            "domain": "PaketYonetim"
+        },
+        {
+            "id": "YerAcildiBildir",
+            "kind": "command",
+            "signature": {
+                "actor": "System",
+                "verb": "notifies",
+                "ownership": "all",
+                "resource": "Appointment"
+            },
+            "delegation": null,
+            "target": null,
+            "source": null,
+            "recipient": null,
+            "description": "Bir seansta yer bosalinca o seansin tum 'beklemede' randevularinin uyelerine bildirim gonderir.",
+            "schedule": null,
+            "orderBy": null,
+            "limit": null,
+            "guards": [],
+            "calculate": [],
+            "effects": [
+                {
+                    "kind": "send",
+                    "message": "YerAcildiBildirimi",
+                    "recipient": [
+                        "Appointment",
+                        "owner"
+                    ]
+                }
+            ],
+            "access": {
+                "writes": [
+                    "Appointment"
+                ],
+                "reads": []
+            },
+            "flows": [
+                "RandevuIptal",
+                "RandevuOnayYonetim"
+            ],
+            "processes": [],
+            "domain": "RandevuKatilim"
+        }
+    ],
+    "entities": [
+        {
+            "id": "Appointment",
+            "name": "Appointment",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "bookedAt",
+                    "type": "DateTime",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "cancelledAt",
+                    "type": "DateTime",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "ClassType",
+            "name": "ClassType",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "equipment",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "capacityType",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "capacity",
+                    "type": "Int",
+                    "collection": false
+                },
+                {
+                    "name": "duration",
+                    "type": "Duration",
+                    "collection": false
+                },
+                {
+                    "name": "approvalType",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "cancelWindow",
+                    "type": "Duration",
+                    "collection": false
+                },
+                {
+                    "name": "checkinWindow",
+                    "type": "Duration",
+                    "collection": false
+                },
+                {
+                    "name": "validUntil",
+                    "type": "Date",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "MemberProfile",
+            "name": "MemberProfile",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "fullName",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "contact",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "joinedAt",
+                    "type": "Date",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "source",
+                    "type": "String",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "Package",
+            "name": "Package",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "name",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "startsAt",
+                    "type": "Date",
+                    "collection": false
+                },
+                {
+                    "name": "endsAt",
+                    "type": "Date",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "items",
+                    "type": "PackageItem",
+                    "collection": true
+                }
+            ]
+        },
+        {
+            "id": "PackageItem",
+            "name": "PackageItem",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "total",
+                    "type": "Int",
+                    "collection": false
+                },
+                {
+                    "name": "remaining",
+                    "type": "Int",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "PackageRequest",
+            "name": "PackageRequest",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "requestType",
+                    "type": "String",
+                    "collection": false
+                },
+                {
+                    "name": "requestedDuration",
+                    "type": "Duration",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "Receipt",
+            "name": "Receipt",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "amount",
+                    "type": "Decimal",
+                    "collection": false
+                },
+                {
+                    "name": "issuedAt",
+                    "type": "Date",
+                    "collection": false
+                },
+                {
+                    "name": "paymentNote",
+                    "type": "String",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "Session",
+            "name": "Session",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "startsAt",
+                    "type": "DateTime",
+                    "collection": false
+                },
+                {
+                    "name": "capacity",
+                    "type": "Int",
+                    "collection": false
+                },
+                {
+                    "name": "remaining",
+                    "type": "Int",
+                    "collection": false
+                },
+                {
+                    "name": "status",
+                    "type": "String",
+                    "collection": false
+                }
+            ]
+        },
+        {
+            "id": "UsageRecord",
+            "name": "UsageRecord",
+            "domain": "Studio",
+            "fields": [
+                {
+                    "name": "enteredAt",
+                    "type": "DateTime",
+                    "collection": false
+                }
+            ]
+        }
+    ],
+    "flows": [
+        {
+            "id": "DersTipiYonetimi",
+            "actor": "Manager",
+            "note": "Yonetici ders tiplerini tanimlar/duzenler.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Tanimla",
+                    "target": "TanimlaDersTipi",
+                    "optional": false,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Guncelle",
+                    "target": "GuncelleDersTipi",
+                    "optional": true,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Pasiflestir",
+                    "target": "PasiflestirDersTipi",
+                    "optional": true,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "SeansPlanlama",
+            "actor": "Manager",
+            "note": "Yonetici takvime seans koyar ve egitmen atar.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Olustur",
+                    "target": "OlusturSeans",
+                    "optional": false,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Ata",
+                    "target": "AtaEgitmen",
+                    "optional": true,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Duzenle",
+                    "target": "GuncelleSeans",
+                    "optional": true,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Iptal",
+                    "target": "IptalSeans",
+                    "optional": true,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "SeanslarimGoruntule",
+            "actor": "Instructor",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "ListSeanslarim",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "UyelikPaketSatis",
+            "actor": "Manager",
+            "note": "Yonetici uyeyi kaydeder ve paket satar.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Kayit",
+                    "target": "KaydetUye",
+                    "optional": true,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Paket",
+                    "target": "OlusturPaket",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Fis",
+                    "target": "KesFis",
+                    "optional": true,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "PaketlerimGoruntule",
+            "actor": "Member",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "ListPaketlerim",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "RandevuAlma",
+            "actor": "Member",
+            "note": "Uye acik seanslardan birini secip randevu alir.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "ListAcikSeanslar",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "outside",
+                    "text": "katilmak istedigi seansi secer"
+                },
+                {
+                    "type": "step",
+                    "name": "Al",
+                    "target": "OlusturRandevu",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "abandon",
+                    "text": "randevu almaktan vazgecer"
+                }
+            ]
+        },
+        {
+            "id": "BeklemeOnay",
+            "actor": "Member",
+            "note": "'Yer acildi' bildirimi sonrasi uye acilan yeri onaylar.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Onayla",
+                    "target": "OnaylaBeklemeRandevu",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "RandevuIptal",
+            "actor": "Member",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "RaporRandevularim",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "outside",
+                    "text": "iptal edecegi randevuyu secer"
+                },
+                {
+                    "type": "step",
+                    "name": "Iptal",
+                    "target": "IptalRandevu",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "RandevuOnayYonetim",
+            "actor": "Manager",
+            "note": "Yonetici onayi gerektiren ders tiplerinde randevulari degerlendirir.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "RaporRandevular",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "either",
+                    "branches": [
+                        [
+                            {
+                                "type": "step",
+                                "name": "Onayla",
+                                "target": "OnaylaRandevu",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ],
+                        [
+                            {
+                                "type": "step",
+                                "name": "Reddet",
+                                "target": "ReddetRandevu",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ]
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "Yoklama",
+            "actor": "Instructor",
+            "note": "Egitmen kendi seansinin katilimini isaretler.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "RaporKatilimlarim",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "either",
+                    "branches": [
+                        [
+                            {
+                                "type": "step",
+                                "name": "Geldi",
+                                "target": "IsaretleGeldi",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ],
+                        [
+                            {
+                                "type": "step",
+                                "name": "Gelmedi",
+                                "target": "IsaretleGelmedi",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ]
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "UyeGiris",
+            "actor": "Member",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Giris",
+                    "target": "SeansaGiris",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "PaketTalep",
+            "actor": "Member",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Olustur",
+                    "target": "OlusturPaketTalebi",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                }
+            ]
+        },
+        {
+            "id": "PaketTalepDegerlendir",
+            "actor": "Manager",
+            "note": null,
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Listele",
+                    "target": "ListPaketTalepleri",
+                    "optional": false,
+                    "repeat": false,
+                    "using": null
+                },
+                {
+                    "type": "either",
+                    "branches": [
+                        [
+                            {
+                                "type": "step",
+                                "name": "Onayla",
+                                "target": "OnaylaPaketTalebi",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ],
+                        [
+                            {
+                                "type": "step",
+                                "name": "Reddet",
+                                "target": "ReddetPaketTalebi",
+                                "optional": false,
+                                "repeat": true,
+                                "using": null
+                            }
+                        ]
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "PaketIslemleri",
+            "actor": "Manager",
+            "note": "Yonetici dogrudan iade ve hediye hak islemleri.",
+            "items": [
+                {
+                    "type": "step",
+                    "name": "Iade",
+                    "target": "IadePaket",
+                    "optional": true,
+                    "repeat": true,
+                    "using": null
+                },
+                {
+                    "type": "step",
+                    "name": "Hediye",
+                    "target": "HediyeHak",
+                    "optional": true,
+                    "repeat": true,
+                    "using": null
+                }
+            ]
+        }
+    ],
+    "processes": [
+        {
+            "id": "TakvimSureci",
+            "entity": "Session",
+            "note": "Takvim olusturma: yonetici planlar, egitmen gorur.",
+            "items": [
+                {
+                    "type": "stage",
+                    "name": "Planla",
+                    "stageKind": "flow",
+                    "flow": "SeansPlanlama",
+                    "by": "Manager"
+                },
+                {
+                    "type": "stage",
+                    "name": "Goruntule",
+                    "stageKind": "flow",
+                    "flow": "SeanslarimGoruntule",
+                    "by": "Instructor"
+                }
+            ]
+        },
+        {
+            "id": "UyelikPaketSureci",
+            "entity": "Package",
+            "note": "Uyelik ve paket satisi.",
+            "items": [
+                {
+                    "type": "stage",
+                    "name": "Satis",
+                    "stageKind": "flow",
+                    "flow": "UyelikPaketSatis",
+                    "by": "Manager"
+                },
+                {
+                    "type": "stage",
+                    "name": "Goruntule",
+                    "stageKind": "flow",
+                    "flow": "PaketlerimGoruntule",
+                    "by": "Member"
+                }
+            ]
+        },
+        {
+            "id": "RandevuKatilimSureci",
+            "entity": "Appointment",
+            "note": "Randevu alma, onay, iptal, yoklama ve self check-in.",
+            "items": [
+                {
+                    "type": "stage",
+                    "name": "Al",
+                    "stageKind": "flow",
+                    "flow": "RandevuAlma",
+                    "by": "Member"
+                },
+                {
+                    "type": "stage",
+                    "name": "BeklemeOnay",
+                    "stageKind": "flow",
+                    "flow": "BeklemeOnay",
+                    "by": "Member"
+                },
+                {
+                    "type": "stage",
+                    "name": "Onay",
+                    "stageKind": "flow",
+                    "flow": "RandevuOnayYonetim",
+                    "by": "Manager"
+                },
+                {
+                    "type": "stage",
+                    "name": "Iptal",
+                    "stageKind": "flow",
+                    "flow": "RandevuIptal",
+                    "by": "Member"
+                },
+                {
+                    "type": "stage",
+                    "name": "Yoklama",
+                    "stageKind": "flow",
+                    "flow": "Yoklama",
+                    "by": "Instructor"
+                },
+                {
+                    "type": "stage",
+                    "name": "Giris",
+                    "stageKind": "flow",
+                    "flow": "UyeGiris",
+                    "by": "Member"
+                }
+            ]
+        },
+        {
+            "id": "PaketYonetimSureci",
+            "entity": "Package",
+            "note": "Dondurma/uzatma talebi (uye) -> degerlendirme (yonetici) + dogrudan islemler.",
+            "items": [
+                {
+                    "type": "stage",
+                    "name": "Talep",
+                    "stageKind": "flow",
+                    "flow": "PaketTalep",
+                    "by": "Member"
+                },
+                {
+                    "type": "stage",
+                    "name": "Degerlendir",
+                    "stageKind": "flow",
+                    "flow": "PaketTalepDegerlendir",
+                    "by": "Manager"
+                },
+                {
+                    "type": "stage",
+                    "name": "Islem",
+                    "stageKind": "flow",
+                    "flow": "PaketIslemleri",
+                    "by": "Manager"
+                }
+            ]
+        }
+    ],
+    "relations": [
+        {
+            "id": "assignedSessions",
+            "source": "Instructor",
+            "target": "Session"
+        },
+        {
+            "id": "sessionAppointments",
+            "source": "Instructor",
+            "target": "Appointment"
+        }
+    ],
+    "actors": [
+        {
+            "id": "Instructor",
+            "extends": null
+        },
+        {
+            "id": "Manager",
+            "extends": null
+        },
+        {
+            "id": "Member",
+            "extends": null
+        },
+        {
+            "id": "System",
+            "extends": null
+        }
+    ],
+    "calendars": [],
+    "verbs": [
+        "approves",
+        "assigns",
+        "awards",
+        "cancels",
+        "completes",
+        "confirms",
+        "deactivates",
+        "expires",
+        "freezes",
+        "misses",
+        "notifies",
+        "refunds",
+        "rejects",
+        "resumes"
+    ],
+    "domains": [
+        "Akislar",
+        "PaketYonetim",
+        "RandevuKatilim",
+        "Raporlama",
+        "Studio",
+        "Surecler",
+        "Takvim",
+        "Tanimlamalar",
+        "UyelikPaket"
+    ],
+    "meta": {
+        "schemaVersion": 2,
+        "hasErrors": false,
+        "errorCount": 0
+    }
+}

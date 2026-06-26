@@ -52,7 +52,8 @@ public static class GmBuilder
                 .ThenBy(x => x.To.Op, StringComparer.Ordinal).ToList(),
             Deployables: m.Deployables.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
             Uncharted: m.Uncharted.OrderBy(x => x.Name, StringComparer.Ordinal).ToList(),
-            Env: env);
+            Env: env,
+            TestPlan: TestPlanBuilder.Build(contract, m.Operations));
     }
 
     static GmOperation BuildOp(OperationJson o, bool linked, Dictionary<string, ContractOp> contractOps)

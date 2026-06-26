@@ -1,0 +1,3833 @@
+{
+  "mode": "linked",
+  "contract": "./studyo.operations.json",
+  "meta": {
+    "hasErrors": false,
+    "errorCount": 0
+  },
+  "deployables": [],
+  "modules": [
+    {
+      "name": "Shared",
+      "pureTechnical": true
+    },
+    {
+      "name": "Studio",
+      "pureTechnical": false
+    },
+    {
+      "name": "Notifications",
+      "pureTechnical": true
+    }
+  ],
+  "operations": [
+    {
+      "id": "TanimlaDersTipi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "TanimlaDersTipi",
+      "signature": {
+        "params": [
+          {
+            "name": "name",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "equipment",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "capacityType",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "capacity",
+            "type": "Int",
+            "collection": false
+          },
+          {
+            "name": "duration",
+            "type": "Duration",
+            "collection": false
+          },
+          {
+            "name": "approvalType",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "cancelWindow",
+            "type": "Duration",
+            "collection": false
+          },
+          {
+            "name": "checkinWindow",
+            "type": "Duration",
+            "collection": false
+          },
+          {
+            "name": "validUntil",
+            "type": "Date",
+            "collection": false
+          }
+        ],
+        "returns": "ClassTypeId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/class-types"
+            }
+          ],
+          "raw": "@rest(POST, \"/class-types\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [
+          "ClassType"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": "Yonetici yeni ders tipi olusturur (ekipman aletli/mat, tek/grup, kapasite, sure, onay turu, cezasiz iptal suresi, giris penceresi).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "GuncelleDersTipi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "GuncelleDersTipi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "ClassTypeId",
+            "collection": false
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "equipment",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "capacityType",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "capacity",
+            "type": "Int",
+            "collection": false
+          },
+          {
+            "name": "duration",
+            "type": "Duration",
+            "collection": false
+          },
+          {
+            "name": "approvalType",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "cancelWindow",
+            "type": "Duration",
+            "collection": false
+          },
+          {
+            "name": "checkinWindow",
+            "type": "Duration",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "PUT"
+            },
+            {
+              "kind": "string",
+              "value": "/class-types/:id",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(PUT, \"/class-types/:id\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "ClassType"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "PasiflestirDersTipi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "PasiflestirDersTipi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "ClassTypeId",
+            "collection": false
+          },
+          {
+            "name": "validUntil",
+            "type": "Date",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/class-types/:id/deactivate",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/class-types/:id/deactivate\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "ClassType"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Pasifleştirme = validUntil atamak; cascade yok (önceki seanslar aktif kalır).",
+      "businessNote": "Pasiflestirme = gecerlilik bitis tarihi atamak. Bu tarihten sonra yeni seans acilamaz; tarihten onceki seanslar aktif kalir (cascade yok).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OlusturSeans",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OlusturSeans",
+      "signature": {
+        "params": [
+          {
+            "name": "classTypeId",
+            "type": "ClassTypeId",
+            "collection": false
+          },
+          {
+            "name": "startsAt",
+            "type": "DateTime",
+            "collection": false
+          }
+        ],
+        "returns": "SessionId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/sessions"
+            }
+          ],
+          "raw": "@rest(POST, \"/sessions\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [
+          "ClassType"
+        ],
+        "creates": [
+          "Session"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "remaining = ClassType.capacity. Seans tarihi ClassType geçerlilik penceresinde olmalı (stateful → throws).",
+      "businessNote": "Yonetici aktif bir ders tipinden seans uretir. Kalan kontenjan ders tipinin kapasitesinden gelir. Seans tarihi ders tipinin gecerlilik penceresinde olmalidir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "SessionDateOutsideValidity"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "AtaEgitmen",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "AtaEgitmen",
+      "signature": {
+        "params": [
+          {
+            "name": "sessionId",
+            "type": "SessionId",
+            "collection": false
+          },
+          {
+            "name": "instructorId",
+            "type": "InstructorId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/sessions/:id/assign-instructor",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/sessions/:id/assign-instructor\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Session"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": "Yonetici seansa egitmen atar (assignedSessions iliskisi). Egitmen bundan sonra kendi seanslarini ve katilimcilarini gorur.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "GuncelleSeans",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "GuncelleSeans",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "SessionId",
+            "collection": false
+          },
+          {
+            "name": "startsAt",
+            "type": "DateTime",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "PUT"
+            },
+            {
+              "kind": "string",
+              "value": "/sessions/:id",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(PUT, \"/sessions/:id\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Session"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'planli'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "planli"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": null,
+      "businessNote": "Henuz baslamamis seansin tarih/saatini gunceller.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "SessionNotPlanned"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "IptalSeans",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "IptalSeans",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "SessionId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/sessions/:id/cancel",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/sessions/:id/cancel\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Session"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'planli'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "planli"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "İş tarafı: perform CancelSessionAppointments (bağlı randevular iptal, haklar iade).",
+      "businessNote": "Seans iptal edilince bagli randevular iptal olur, rezerve haklar iade edilir, uyeler bilgilendirilir (perform).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "SessionNotPlanned"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "ListSeanslarim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ListSeanslarim",
+      "signature": {
+        "params": [],
+        "returns": "Session"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/instructor/sessions"
+            }
+          ],
+          "raw": "@rest(GET, \"/instructor/sessions\")"
+        }
+      ],
+      "roles": [
+        "Instructor"
+      ],
+      "ownership": "assignedSessions",
+      "access": {
+        "reads": [
+          "Session"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "startsAt",
+            "direction": "asc"
+          },
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "KaydetUye",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "KaydetUye",
+      "signature": {
+        "params": [
+          {
+            "name": "username",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "password",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "fullName",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "contact",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "source",
+            "type": "String",
+            "collection": false
+          }
+        ],
+        "returns": "MemberId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/members"
+            }
+          ],
+          "raw": "@rest(POST, \"/members\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [
+          "MemberProfile"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": "Yonetici yeni uye kaydeder (ad, iletisim, gelis kaynagi).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OlusturPaket",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OlusturPaket",
+      "signature": {
+        "params": [
+          {
+            "name": "memberId",
+            "type": "MemberId",
+            "collection": false
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "startsAt",
+            "type": "Date",
+            "collection": false
+          },
+          {
+            "name": "endsAt",
+            "type": "Date",
+            "collection": false
+          }
+        ],
+        "returns": "PackageId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/packages"
+            }
+          ],
+          "raw": "@rest(POST, \"/packages\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [
+          "Package"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": "Yonetici bir uye icin paket acar; ice farkli ders tiplerinden hak kalemleri (kalem = ders tipi + seans adedi) ve baslangic-bitis tarihi koyar.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "KesFis",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "KesFis",
+      "signature": {
+        "params": [
+          {
+            "name": "packageId",
+            "type": "PackageId",
+            "collection": false
+          },
+          {
+            "name": "amount",
+            "type": "Decimal",
+            "collection": false
+          },
+          {
+            "name": "paymentNote",
+            "type": "String",
+            "collection": false
+          }
+        ],
+        "returns": "ReceiptId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/packages/:id/receipt",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/packages/:id/receipt\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [
+          "Package"
+        ],
+        "creates": [
+          "Receipt"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Ödeme entegrasyonu yok; serbest fiş bilgisi. İsteğe bağlı.",
+      "businessNote": "Pakete istinaden basit fis/fatura bilgisi (tutar, odeme yontemi notu). Odeme entegrasyonu yok. Istege baglidir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "ListPaketlerim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ListPaketlerim",
+      "signature": {
+        "params": [],
+        "returns": "Package"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/member/packages"
+            }
+          ],
+          "raw": "@rest(GET, \"/member/packages\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [
+          "Package"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "endsAt",
+            "direction": "asc"
+          },
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "ListAcikSeanslar",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ListAcikSeanslar",
+      "signature": {
+        "params": [],
+        "returns": "Session"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/sessions/open"
+            }
+          ],
+          "raw": "@rest(GET, \"/sessions/open\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [
+          "Session"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "İş guard'ı when{status='planli'} sonuç-filtresidir (sorgu semantiği).",
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "startsAt",
+            "direction": "asc"
+          },
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "OlusturRandevu",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OlusturRandevu",
+      "signature": {
+        "params": [
+          {
+            "name": "sessionId",
+            "type": "SessionId",
+            "collection": false
+          },
+          {
+            "name": "requestKey",
+            "type": "String",
+            "collection": false
+          }
+        ],
+        "returns": "AppointmentId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments"
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [
+          "ClassType"
+        ],
+        "creates": [
+          "Appointment"
+        ],
+        "updates": [
+          "Session",
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "remaining > 0",
+          "ast": {
+            "node": "cmp",
+            "op": ">",
+            "left": {
+              "path": [
+                "remaining"
+              ]
+            },
+            "right": {
+              "kind": "number",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "note": "Önkoşullar: (1) ders tipinde kalan hak > 0 (NoEntitlement), (2) üyenin bu seansta zaten aktif randevusu olmamalı — üye-seans tekilliği (AlreadyBooked; mevcut-randevu varlık sorgusu, tek-alan karşılaştırması olmadığından rule ifadesi değil yalnız throws). Sonuç (kontenjan + onay türüne göre): onaylandi / onaybekliyor / beklemede; onaylı dallarda bir kontenjan + bir hak rezerve edilir. idempotent: client-üretimli requestKey ile aynı gönderim ağ-retry'sinde tek randevu yaratır (anahtar sessionId değil — iki farklı üyenin aynı seansı yanlışlıkla bastırılmasını önler). AlreadyBooked (ayrı gönderimle çift-booking) ile requestKey (aynı gönderim retry) farklı endişelerdir.",
+      "businessNote": "Onkosul: uyenin o seansin ders tipinde kalan hakki > 0 olmali (yoksa engellenir).\nSonuc durumu: kontenjan doluysa 'beklemede'; kontenjan var + ders tipi otomatik onayli ise 'onaylandi'; kontenjan var + ders tipi yonetici onayi istiyorsa 'onaybekliyor'.\n'onaylandi'/'onaybekliyor' durumlarinda bir kontenjan ve bir hak rezerve edilir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "NoEntitlement",
+        "AlreadyBooked"
+      ],
+      "idempotent": {
+        "keys": [
+          "requestKey"
+        ]
+      },
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OnaylaBeklemeRandevu",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OnaylaBeklemeRandevu",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/confirm-waitlist",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/confirm-waitlist\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment",
+          "Session",
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'beklemede'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "beklemede"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "İlk onaylayan kapar (Session.remaining yarışı → optimistic concurrency). Kontenjan dolmuşsa reddedilir.",
+      "businessNote": "'Yer acildi' bildirimini alan uye acilan yeri onaylar. Kontenjan hala varsa onaylanir (ilk onaylayan kapar); dolmussa reddedilir. Ders tipi yonetici onayi istiyorsa 'onaybekliyor' olur.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotWaiting"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "IptalRandevu",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "IptalRandevu",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/cancel",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/cancel\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment",
+          "Session",
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Eşik (ClassType.cancelWindow): zamanında → hak + yer iade; geç → hak yanar, yer yine boşalır. Her halükârda yer açıldığı için iş tarafı perform YerAcildiBildir tetikler.",
+      "businessNote": "Seans baslangicina kalan sure ders tipinin cezasiz iptal suresinden fazlaysa: zamaninda iptal, hak ve yer iade.\nAz ise: gec iptal, hak yanar, yer yine bosalir.\nHer iki halde de seansin bekleme listesine 'yer acildi' bildirimi gider (perform).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OnaylaRandevu",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OnaylaRandevu",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/approve",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/approve\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'onaybekliyor'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "onaybekliyor"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": null,
+      "businessNote": "Yonetici onayi gerektiren ders tipinde bekleyen randevuyu onaylar.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotPending"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "ReddetRandevu",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ReddetRandevu",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/reject",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/reject\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment",
+          "Session",
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'onaybekliyor'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "onaybekliyor"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "Rezerve hak + yer iade. İş tarafı perform YerAcildiBildir tetikler.",
+      "businessNote": "Yonetici randevuyu reddeder; rezerve hak ve yer iade edilir, bekleme listesine bildirim gider.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotPending"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "IsaretleGeldi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "IsaretleGeldi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/attended",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/attended\")"
+        }
+      ],
+      "roles": [
+        "Instructor"
+      ],
+      "ownership": "sessionAppointments",
+      "access": {
+        "reads": [],
+        "creates": [
+          "UsageRecord"
+        ],
+        "updates": [
+          "Appointment"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'onaylandi'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "onaylandi"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": null,
+      "businessNote": "Egitmen kendi seansinin onayli randevusunu 'geldi' isaretler; kullanim kaydi olusur (hak zaten rezerve/dusulu).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotConfirmed"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "SeansaGiris",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "SeansaGiris",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/checkin",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/checkin\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [],
+        "creates": [
+          "UsageRecord"
+        ],
+        "updates": [
+          "Appointment"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'onaylandi'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "onaylandi"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "Yalnızca ClassType.checkinWindow içinde kabul edilir (stateful → throws OutsideCheckinWindow).",
+      "businessNote": "Studyo girisinde uye o saatteki onayli randevusu icin 'geldim' der. Yalnizca ders tipinin giris penceresi icinde kabul edilir. Kullanim kaydi olusur.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotConfirmed",
+        "OutsideCheckinWindow"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "IsaretleGelmedi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "IsaretleGelmedi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "AppointmentId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/appointments/:id/no-show",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/appointments/:id/no-show\")"
+        }
+      ],
+      "roles": [
+        "Instructor"
+      ],
+      "ownership": "sessionAppointments",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'onaylandi'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "onaylandi"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "Hak yanar (rezerve, iade yok).",
+      "businessNote": "Egitmen 'gelmedi' isaretler; randevu kacirildi, hak yanar (rezerve, iade yok).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "AppointmentNotConfirmed"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "YerAcildiBildir",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "YerAcildiBildir",
+      "signature": {
+        "params": [
+          {
+            "name": "sessionId",
+            "type": "SessionId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "Appointment",
+          "MemberProfile"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Bir seansta yer boşalınca o seansın 'beklemede' randevu sahiplerini (Appointment) ve iletişim/token bilgilerini (MemberProfile) okur; alıcı token listesini SlotOpened yüküne koyup yayar. Notifications modülü bunu push'a çevirir.",
+      "businessNote": "Bir seansta yer bosalinca o seansin tum 'beklemede' randevularinin uyelerine bildirim gonderir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [
+        "SlotOpened"
+      ],
+      "pagination": null
+    },
+    {
+      "id": "CancelSessionAppointments",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "CancelSessionAppointments",
+      "signature": {
+        "params": [
+          {
+            "name": "sessionId",
+            "type": "SessionId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment",
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Randevular iptal, rezerve haklar iade; üyeler bilgilendirilir (iş tarafı send).",
+      "businessNote": "Iptal edilen seansin randevulari iptal edilir; rezerve haklar iade edilir; uyeler bilgilendirilir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OtomatikKacirildi",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "OtomatikKacirildi",
+      "signature": {
+        "params": [],
+        "returns": "Unit"
+      },
+      "ext": [
+        {
+          "ns": "trigger",
+          "name": "cron",
+          "args": {
+            "schedule": "0 * * * *"
+          }
+        }
+      ],
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Appointment"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Saatlik: işaretlenmeden zamanı geçen 'onaylandi' randevuları 'kacirildi'ya çeker (hak yanar).",
+      "businessNote": "Egitmen/uye isaretlemeden zamani gecen 'onaylandi' randevulari 'kacirildi'ya ceker (hak yanar).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "OlusturPaketTalebi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OlusturPaketTalebi",
+      "signature": {
+        "params": [
+          {
+            "name": "packageId",
+            "type": "PackageId",
+            "collection": false
+          },
+          {
+            "name": "requestType",
+            "type": "String",
+            "collection": false
+          },
+          {
+            "name": "requestedDuration",
+            "type": "Duration",
+            "collection": false
+          }
+        ],
+        "returns": "PackageRequestId"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/package-requests"
+            }
+          ],
+          "raw": "@rest(POST, \"/package-requests\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [
+          "Package"
+        ],
+        "creates": [
+          "PackageRequest"
+        ],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": "Uye kendi aktif paketi icin dondurma veya uzatma talebi olusturur (tur, istenen sure).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "ListPaketTalepleri",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ListPaketTalepleri",
+      "signature": {
+        "params": [],
+        "returns": "PackageRequest"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/package-requests"
+            }
+          ],
+          "raw": "@rest(GET, \"/package-requests\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [
+          "PackageRequest"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "İş guard'ı when{status='talepedildi'} sonuç-filtresidir.",
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "OnaylaPaketTalebi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "OnaylaPaketTalebi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "PackageRequestId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/package-requests/:id/approve",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/package-requests/:id/approve\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "PackageRequest"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'talepedildi'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "talepedildi"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": "İş tarafı perform UygulaPaketTalebi (dondurma/uzatma uygulanır).",
+      "businessNote": "Yonetici dondurma/uzatma talebini onaylar; uygulama System tarafindan yapilir (perform).",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "RequestNotPending"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "ReddetPaketTalebi",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "ReddetPaketTalebi",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "PackageRequestId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/package-requests/:id/reject",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/package-requests/:id/reject\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "PackageRequest"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [
+        {
+          "text": "status = 'talepedildi'",
+          "ast": {
+            "node": "cmp",
+            "op": "=",
+            "left": {
+              "path": [
+                "status"
+              ]
+            },
+            "right": {
+              "kind": "string",
+              "value": "talepedildi"
+            }
+          },
+          "guardRef": "where:0"
+        }
+      ],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [
+        "RequestNotPending"
+      ],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "UygulaPaketTalebi",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "UygulaPaketTalebi",
+      "signature": {
+        "params": [
+          {
+            "name": "packageId",
+            "type": "PackageId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "dondurma → status 'donduruldu' + bitiş ötelenir; uzatma → status 'aktif' kalır + bitiş ötelenir.",
+      "businessNote": "Talep tipine gore: dondurma -> durum 'donduruldu', bitis tarihi dondurma suresi kadar otelenir; uzatma -> durum 'aktif' kalir, yalniz bitis tarihi otelenir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "IadePaket",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "IadePaket",
+      "signature": {
+        "params": [
+          {
+            "name": "id",
+            "type": "PackageId",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/packages/:id/refund",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/packages/:id/refund\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Kalan haklar sıfırlanır.",
+      "businessNote": "Yonetici paketi iade eder; kalan haklar sifirlanir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "HediyeHak",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "HediyeHak",
+      "signature": {
+        "params": [
+          {
+            "name": "packageId",
+            "type": "PackageId",
+            "collection": false
+          },
+          {
+            "name": "classTypeId",
+            "type": "ClassTypeId",
+            "collection": false
+          },
+          {
+            "name": "count",
+            "type": "Int",
+            "collection": false
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "POST"
+            },
+            {
+              "kind": "string",
+              "value": "/packages/:id/gift",
+              "params": [
+                "id"
+              ]
+            }
+          ],
+          "raw": "@rest(POST, \"/packages/:id/gift\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "any",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "İlgili ders tipi kaleminin kalan seansı artırılır (geç iptal / no-show telafisi).",
+      "businessNote": "Yonetici bir uyenin paketine hediye seans hakki ekler (ilgili ders tipi kaleminin kalan seansi artirilir). Ozellikle gec iptal/no-show telafisi icin.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "KapatSuresiDolanPaket",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "KapatSuresiDolanPaket",
+      "signature": {
+        "params": [],
+        "returns": "Unit"
+      },
+      "ext": [
+        {
+          "ns": "trigger",
+          "name": "cron",
+          "args": {
+            "schedule": "0 2 * * *"
+          }
+        }
+      ],
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Günlük 02:00: bitişi geçen aktif paketi 'suresidoldu' yapar; kullanılmayan haklar breakage.",
+      "businessNote": "Bitis tarihi gecen aktif paketi 'suresi doldu' yapar; kullanilmayan haklar breakage olarak rapora kalir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "CozDondurma",
+      "module": "Studio",
+      "visibility": "internal",
+      "realizes": "CozDondurma",
+      "signature": {
+        "params": [],
+        "returns": "Unit"
+      },
+      "ext": [
+        {
+          "ns": "trigger",
+          "name": "cron",
+          "args": {
+            "schedule": "0 3 * * *"
+          }
+        }
+      ],
+      "serving": [],
+      "roles": [
+        "System"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [
+          "Package"
+        ],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "Günlük 03:00: dondurma süresi dolan paketi otomatik 'aktif'e çevirir.",
+      "businessNote": "Dondurma suresi dolan paketi otomatik 'aktif'e cevirir.",
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    },
+    {
+      "id": "RaporSeanslar",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporSeanslar",
+      "signature": {
+        "params": [],
+        "returns": "Session"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/sessions"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/sessions\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "Session"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "startsAt",
+            "direction": "asc"
+          },
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporRandevular",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporRandevular",
+      "signature": {
+        "params": [],
+        "returns": "Appointment"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/appointments"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/appointments\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "Appointment"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "bookedAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporKullanim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporKullanim",
+      "signature": {
+        "params": [],
+        "returns": "UsageRecord"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/usage"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/usage\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "UsageRecord"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "enteredAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporPaketler",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporPaketler",
+      "signature": {
+        "params": [],
+        "returns": "Package"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/packages"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/packages\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "Package"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "endsAt",
+            "direction": "asc"
+          },
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporUyeler",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporUyeler",
+      "signature": {
+        "params": [],
+        "returns": "MemberProfile"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/members"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/members\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "MemberProfile"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "id",
+            "direction": "asc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporGelir",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporGelir",
+      "signature": {
+        "params": [],
+        "returns": "Receipt"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/reports/revenue"
+            }
+          ],
+          "raw": "@rest(GET, \"/reports/revenue\")"
+        }
+      ],
+      "roles": [
+        "Manager"
+      ],
+      "ownership": "all",
+      "access": {
+        "reads": [
+          "Receipt"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "issuedAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporKatilimlarim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporKatilimlarim",
+      "signature": {
+        "params": [],
+        "returns": "Appointment"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/instructor/attendance"
+            }
+          ],
+          "raw": "@rest(GET, \"/instructor/attendance\")"
+        }
+      ],
+      "roles": [
+        "Instructor"
+      ],
+      "ownership": "sessionAppointments",
+      "access": {
+        "reads": [
+          "Appointment"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "bookedAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporRandevularim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporRandevularim",
+      "signature": {
+        "params": [],
+        "returns": "Appointment"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/member/appointments"
+            }
+          ],
+          "raw": "@rest(GET, \"/member/appointments\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [
+          "Appointment"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "bookedAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "RaporKullanimim",
+      "module": "Studio",
+      "visibility": "exposed",
+      "realizes": "RaporKullanimim",
+      "signature": {
+        "params": [],
+        "returns": "UsageRecord"
+      },
+      "serving": [
+        {
+          "protocol": "rest",
+          "args": [
+            {
+              "kind": "keyword",
+              "value": "GET"
+            },
+            {
+              "kind": "string",
+              "value": "/member/usage"
+            }
+          ],
+          "raw": "@rest(GET, \"/member/usage\")"
+        }
+      ],
+      "roles": [
+        "Member"
+      ],
+      "ownership": "own",
+      "access": {
+        "reads": [
+          "UsageRecord"
+        ],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": null,
+      "businessNote": null,
+      "edges": [],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": {
+        "strategy": "cursor",
+        "keys": [
+          {
+            "field": "enteredAt",
+            "direction": "desc"
+          },
+          {
+            "field": "id",
+            "direction": "desc"
+          }
+        ],
+        "size": 50
+      }
+    },
+    {
+      "id": "PushSlotOpened",
+      "module": "Notifications",
+      "visibility": "internal",
+      "realizes": null,
+      "signature": {
+        "params": [
+          {
+            "name": "sessionId",
+            "type": "SessionId",
+            "collection": false
+          },
+          {
+            "name": "recipientTokens",
+            "type": "String",
+            "collection": true
+          }
+        ],
+        "returns": "Unit"
+      },
+      "serving": [],
+      "roles": [],
+      "ownership": null,
+      "access": {
+        "reads": [],
+        "creates": [],
+        "updates": [],
+        "deletes": []
+      },
+      "validation": [],
+      "rule": [],
+      "note": "SlotOpened yükündeki recipientTokens listesindeki her üyeye push bildirim gönderir. Alıcı verisi olay yükünden gelir (Studio'ya cross-module erişim yok).",
+      "businessNote": null,
+      "edges": [
+        {
+          "to": "PushService",
+          "nature": "call",
+          "kind": "external"
+        }
+      ],
+      "consistency": {
+        "risk": "strong",
+        "mode": null
+      },
+      "abac": null,
+      "scopes": [],
+      "throws": [],
+      "idempotent": null,
+      "emits": [],
+      "pagination": null
+    }
+  ],
+  "entities": [
+    {
+      "id": "MemberProfile",
+      "module": "Studio",
+      "realizes": [
+        "MemberProfile"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "MemberId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "fullName",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "contact",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "joinedAt",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "MemberStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        },
+        {
+          "name": "source",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    },
+    {
+      "id": "ClassType",
+      "module": "Studio",
+      "realizes": [
+        "ClassType"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "ClassTypeId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "equipment",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "capacityType",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "capacity",
+          "type": "Int",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "duration",
+          "type": "Duration",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "approvalType",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "cancelWindow",
+          "type": "Duration",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "checkinWindow",
+          "type": "Duration",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "validUntil",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "ClassTypeStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    },
+    {
+      "id": "Session",
+      "module": "Studio",
+      "realizes": [
+        "Session"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "SessionId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "classTypeId",
+          "type": "ClassTypeId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "instructorId",
+          "type": "InstructorId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "startsAt",
+          "type": "DateTime",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "capacity",
+          "type": "Int",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "remaining",
+          "type": "Int",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "SessionStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        }
+      ],
+      "invariants": [
+        {
+          "text": "remaining >= 0",
+          "ast": {
+            "node": "cmp",
+            "op": ">=",
+            "left": {
+              "path": [
+                "remaining"
+              ]
+            },
+            "right": {
+              "kind": "number",
+              "value": 0
+            }
+          }
+        },
+        {
+          "text": "remaining <= capacity",
+          "ast": {
+            "node": "cmp",
+            "op": "<=",
+            "left": {
+              "path": [
+                "remaining"
+              ]
+            },
+            "right": {
+              "path": [
+                "capacity"
+              ]
+            }
+          }
+        }
+      ],
+      "concurrency": "optimistic"
+    },
+    {
+      "id": "PackageItem",
+      "module": "Studio",
+      "realizes": [
+        "PackageItem"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "PackageItemId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "classTypeId",
+          "type": "ClassTypeId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "total",
+          "type": "Int",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "remaining",
+          "type": "Int",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        }
+      ],
+      "invariants": [
+        {
+          "text": "remaining >= 0",
+          "ast": {
+            "node": "cmp",
+            "op": ">=",
+            "left": {
+              "path": [
+                "remaining"
+              ]
+            },
+            "right": {
+              "kind": "number",
+              "value": 0
+            }
+          }
+        },
+        {
+          "text": "remaining <= total",
+          "ast": {
+            "node": "cmp",
+            "op": "<=",
+            "left": {
+              "path": [
+                "remaining"
+              ]
+            },
+            "right": {
+              "path": [
+                "total"
+              ]
+            }
+          }
+        }
+      ],
+      "concurrency": null
+    },
+    {
+      "id": "Package",
+      "module": "Studio",
+      "realizes": [
+        "Package"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "PackageId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "memberId",
+          "type": "MemberId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "name",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "startsAt",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "endsAt",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "PackageStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        },
+        {
+          "name": "frozenUntil",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "items",
+          "type": "PackageItem",
+          "collection": true,
+          "cardinality": "many",
+          "ref": "entity",
+          "targetModule": "Studio",
+          "crossModule": false
+        }
+      ],
+      "invariants": [
+        {
+          "text": "endsAt >= startsAt",
+          "ast": {
+            "node": "cmp",
+            "op": ">=",
+            "left": {
+              "path": [
+                "endsAt"
+              ]
+            },
+            "right": {
+              "path": [
+                "startsAt"
+              ]
+            }
+          }
+        }
+      ],
+      "concurrency": "optimistic"
+    },
+    {
+      "id": "Appointment",
+      "module": "Studio",
+      "realizes": [
+        "Appointment"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "AppointmentId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "memberId",
+          "type": "MemberId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "sessionId",
+          "type": "SessionId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "packageItemId",
+          "type": "PackageItemId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "bookedAt",
+          "type": "DateTime",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "AppointmentStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        },
+        {
+          "name": "cancelledAt",
+          "type": "DateTime",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    },
+    {
+      "id": "UsageRecord",
+      "module": "Studio",
+      "realizes": [
+        "UsageRecord"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "UsageRecordId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "appointmentId",
+          "type": "AppointmentId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "memberId",
+          "type": "MemberId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "enteredAt",
+          "type": "DateTime",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    },
+    {
+      "id": "Receipt",
+      "module": "Studio",
+      "realizes": [
+        "Receipt"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "ReceiptId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "packageId",
+          "type": "PackageId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "amount",
+          "type": "Decimal",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "issuedAt",
+          "type": "Date",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "paymentNote",
+          "type": "String",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    },
+    {
+      "id": "PackageRequest",
+      "module": "Studio",
+      "realizes": [
+        "PackageRequest"
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "type": "PackageRequestId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "packageId",
+          "type": "PackageId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "memberId",
+          "type": "MemberId",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "requestType",
+          "type": "RequestType",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        },
+        {
+          "name": "requestedDuration",
+          "type": "Duration",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "scalar"
+        },
+        {
+          "name": "status",
+          "type": "RequestStatus",
+          "collection": false,
+          "cardinality": "one",
+          "ref": "enum"
+        }
+      ],
+      "invariants": [],
+      "concurrency": null
+    }
+  ],
+  "types": [
+    {
+      "id": "MemberStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "aktif",
+        "pasif"
+      ]
+    },
+    {
+      "id": "ClassTypeStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "aktif",
+        "pasif"
+      ]
+    },
+    {
+      "id": "SessionStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "planli",
+        "iptal"
+      ]
+    },
+    {
+      "id": "PackageStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "aktif",
+        "donduruldu",
+        "suresidoldu",
+        "iade"
+      ]
+    },
+    {
+      "id": "AppointmentStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "onaylandi",
+        "onaybekliyor",
+        "beklemede",
+        "tamamlandi",
+        "kacirildi",
+        "iptal",
+        "reddedildi"
+      ]
+    },
+    {
+      "id": "RequestStatus",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "talepedildi",
+        "onaylandi",
+        "reddedildi"
+      ]
+    },
+    {
+      "id": "RequestType",
+      "module": "Shared",
+      "kind": "enum",
+      "values": [
+        "dondurma",
+        "uzatma"
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "id": "SessionNotPlanned",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "AppointmentNotWaiting",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "AppointmentNotPending",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "AppointmentNotConfirmed",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "RequestNotPending",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "NoEntitlement",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "AlreadyBooked",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "OutsideCheckinWindow",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    },
+    {
+      "id": "SessionDateOutsideValidity",
+      "module": "Studio",
+      "resultType": "NotProcessable"
+    }
+  ],
+  "events": [
+    {
+      "id": "SlotOpened",
+      "module": "Studio",
+      "payload": [
+        {
+          "name": "sessionId",
+          "type": "SessionId",
+          "collection": false
+        },
+        {
+          "name": "recipientTokens",
+          "type": "String",
+          "collection": true
+        }
+      ]
+    }
+  ],
+  "subscriptions": [
+    {
+      "event": {
+        "module": "Studio",
+        "name": "SlotOpened"
+      },
+      "consumer": {
+        "module": "Notifications",
+        "op": "PushSlotOpened"
+      }
+    }
+  ],
+  "externals": [
+    {
+      "name": "PushService",
+      "generated": false,
+      "operations": [
+        {
+          "id": "SendPush",
+          "signature": {
+            "params": [
+              {
+                "name": "deviceToken",
+                "type": "String",
+                "collection": false
+              },
+              {
+                "name": "message",
+                "type": "String",
+                "collection": false
+              }
+            ],
+            "returns": "Unit"
+          },
+          "serving": [
+            {
+              "protocol": "rest",
+              "args": [
+                {
+                  "kind": "keyword",
+                  "value": "POST"
+                },
+                {
+                  "kind": "string",
+                  "value": "/v1/push"
+                }
+              ],
+              "raw": "@rest(POST, \"/v1/push\")"
+            }
+          ],
+          "validation": []
+        }
+      ]
+    }
+  ],
+  "uncharted": [],
+  "callEdges": [
+    {
+      "from": "PushSlotOpened",
+      "to": {
+        "system": "PushService",
+        "op": "SendPush"
+      },
+      "kind": "external",
+      "compensate": null
+    }
+  ],
+  "coverage": {
+    "unrealizedBusinessOps": [],
+    "uncoveredEntities": []
+  }
+}

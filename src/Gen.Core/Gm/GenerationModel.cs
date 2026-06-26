@@ -20,7 +20,8 @@ public sealed record GenerationModel(
     IReadOnlyList<CallEdgeJson> CallEdges,
     IReadOnlyList<Deployable> Deployables,
     IReadOnlyList<UnchartedJson> Uncharted,
-    TypeEnv Env);
+    TypeEnv Env,
+    TestPlan TestPlan);
 
 /// <summary>
 /// Tip ortamı (Go seam bulgusu sonrası eklendi): predicate path'lerini manifest tiplerine
