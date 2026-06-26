@@ -158,6 +158,8 @@ public static class DotnetEmitter
         WriteAlways(Path.Combine(gen, "Bootstrap.g.cs"), GeneratedBootstrap(gm, config, report));   // AddGenerated/MapGenerated
         WriteIfAbsent(Path.Combine(outDir, "Program.cs"), ProgramShell());          // HumanShell: yoksa-üret
 
+        EmitTests(gm, outDir, report);   // owned test iskeleti (tests/gen/**) — provenance/prune ÖNCESİ (track edilsin)
+
         WriteProvenanceAndPrune(outDir, prev);
     }
 
@@ -190,6 +192,251 @@ public static class DotnetEmitter
         ProvenanceIo.Write(outDir, new Provenance("techgen", ver,
             written.Select(x => new ProvenanceEntry(x.rel, nameof(FileClass.Generated), x.sha)).ToList()));
     }
+
+    // ── test-pass: owned xUnit iskeleti (tasarım §3c/§3d) ───────────────
+    // Her ProcessTest/ScenarioTest → owned `tests/gen/{Scope}/{Name}.g.cs` (WriteAlways: prune+provenance).
+    // 3-faz: (1) temiz-data reset hook (2) ön-gereksinim + RunSequence op çağrıları (3) ASSERT placeholder (T-2.2).
+    // ARRANGE gövdesi AYRI human-seam (T-2.3); burada yalnız partial-method DECLARE + CALL edilir.
+    // Q5/DUR: Prerequisites'inde Single-DIŞI (Ambiguous/Missing) adım olan test → iskelet emit EDİLMEZ (T-3.2 marker).
+    static void EmitTests(GenerationModel gm, string outDir, BuildReport report)
+    {
+        if (gm.TestPlan is null) return;   // defansif (TestPlan boş-plan döner, null değil; spec'e uyum için)
+        var testsDir = Path.Combine(outDir, "tests");
+        Directory.CreateDirectory(testsDir);                   // WriteIfAbsent dizin oluşturmaz → burada hazırla
+        WriteIfAbsent(Path.Combine(testsDir, "Tests.csproj"), TestsCsproj());   // HumanShell (App.csproj deseni): yoksa-üret, asla ezilmez
+        var testsGen = Path.Combine(outDir, "tests", "gen");   // owned (prune'lu) test ağacı
+        var testsSrc = Path.Combine(outDir, "tests", "src");   // human-seam ARRANGE ağacı (WriteIfAbsent, ezilmez)
+        // op-id → GmOperation: ASSERT (T-2.2) RunSequence op'larının Business.Effects + Access'ine bu map'le ulaşır.
+        var opById = new Dictionary<string, GmOperation>(StringComparer.Ordinal);
+        foreach (var o in gm.Operations) opById[o.Id] = o;
+
+        void EmitOne(string scope, string name, IReadOnlyList<string> runSeq, IReadOnlyList<PrereqStep> prereqs, IReadOnlyList<string> writeSet)
+        {
+            if (!AllSinglePrereqs(prereqs)) return;   // Ambiguous/Missing → iskelet emit ETME (T-3.2 DUR-marker)
+            var scopeDir = Path.Combine(testsGen, scope);
+            Directory.CreateDirectory(scopeDir);      // WriteAlways dizin oluşturmaz → burada hazırla
+            WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById));
+            // ARRANGE human-seam (T-2.3): owned iskeletin DECLARE ettiği `partial void Arrange{name}()` gövdesi.
+            // WriteIfAbsent → insan/LLM dolumu (M4 test-arrange) tekrar-üretimde EZİLMEZ. Yalnız ARRANGE; ASSERT owned'da.
+            var seamScopeDir = Path.Combine(testsSrc, scope);
+            Directory.CreateDirectory(seamScopeDir);  // WriteIfAbsent dizin oluşturmaz → burada hazırla
+            WriteIfAbsent(Path.Combine(seamScopeDir, $"{name}.Logic.cs"), TestArrangeSeam(scope, name));
+        }
+
+        // TestPlan zaten ordinal-sıralı → ek sıralama yok (determinizm korunur).
+        foreach (var t in gm.TestPlan.ProcessTests)
+            EmitOne("Process", t.ProcessId, t.RunSequence, t.Prerequisites, t.WriteSet);
+        foreach (var t in gm.TestPlan.OrphanFlowTests)
+            EmitOne(t.Scope, t.Id, t.RunSequence, t.Prerequisites, t.WriteSet);
+        foreach (var t in gm.TestPlan.OrphanOpTests)
+            EmitOne(t.Scope, t.Id, t.RunSequence, t.Prerequisites, t.WriteSet);
+    }
+
+    // Tüm ön-gereksinimler Single mı (boş = evet)? Single-dışı varsa iskelet emit edilmez (Q5/DUR).
+    static bool AllSinglePrereqs(IReadOnlyList<PrereqStep> prereqs) => prereqs.All(p => p.Kind == PrereqKind.Single);
+
+    // 3-faz owned xUnit iskeleti. `WriteAlways` GenHeader (auto-generated + #nullable) ekler → içerik using/namespace ile başlar.
+    static string TestSkeleton(string scope, string name, IReadOnlyList<string> runSeq, IReadOnlyList<PrereqStep> prereqs,
+        IReadOnlyList<string> writeSet, IReadOnlyDictionary<string, GmOperation> opById)
+    {
+        var sb = new StringBuilder();
+        // ön-gereksinim çağrıları (yalnız Single creator op'lar; topo-sıra TestPlan'da korunur).
+        var prereqLines = new StringBuilder();
+        foreach (var p in prereqs)
+            prereqLines.Append($"        await Fixture.RunAsync<{p.CreatorOp}Handler>();   // ön-gereksinim: {p.Entity}\n");
+        // RunSequence op çağrıları (process→flow→op sırası).
+        var runLines = new StringBuilder();
+        foreach (var op in runSeq)
+            runLines.Append($"        await Fixture.RunAsync<{op}Handler>();\n");
+
+        sb.Append($"using {Root}.Tests;\n");
+        sb.Append("using Xunit;\n\n");
+        sb.Append($"namespace {Root}.Tests.{scope};\n\n");
+        sb.Append($"// owned test iskeleti (üreteç-sahibi; her run yenilenir). ARRANGE gövdesi seam'de (T-2.3).\n");
+        sb.Append($"public partial class {name}Tests\n{{\n");
+        // ARRANGE seam çağrısı: temiz-data + ön-gereksinim payload'larını insan/LLM doldurur (gövde T-2.3).
+        sb.Append($"    partial void Arrange{name}();\n\n");
+        sb.Append($"    [Fact]\n");
+        sb.Append($"    public async Task Runs()\n    {{\n");
+        sb.Append($"        // 1) temiz data — izole/sıfırlanmış state (Fixture hook; base fixture T-2.4).\n");
+        sb.Append($"        await Fixture.ResetAsync();\n");
+        sb.Append($"        Arrange{name}();   // ARRANGE seam (T-2.3): temiz-data + ön-gereksinim payload'ları\n\n");
+        if (prereqLines.Length > 0)
+        {
+            sb.Append($"        // 2a) ön-gereksinimler (Single creator op'ları)\n");
+            sb.Append(prereqLines);
+            sb.Append("\n");
+        }
+        sb.Append($"        // 2b) RunSequence — process→flow→op çağrı sırası\n");
+        if (runLines.Length > 0) sb.Append(runLines);
+        sb.Append("\n");
+        // 3) ASSERT — üreteç-sahibi, contract-çapalı (effects/access/throws). LLM yargısı YOK (anti-circularity §3d).
+        sb.Append($"        // 3) ASSERT — contract-çapalı (üretilir; effects→field, access→varlık, throws→negatif).\n");
+        sb.Append(AssertBlock(runSeq, writeSet, opById));
+        sb.Append($"    }}\n}}\n");
+        return sb.ToString();
+    }
+
+    // ── ARRANGE human-seam (T-2.3): tek LLM-dolumu nokta (anti-circularity §3c/§3d) ──
+    // owned iskelet `partial void Arrange{name}();` DECLARE eder (TestSkeleton); gövdesi BURADA.
+    // İmza owned bildirimle birebir aynı (parametresiz `void`) → partial-method linkage. `WriteIfAbsent` (ezilmez).
+    // Yalnız marker yorumu (`doldurulacak`) — M4 `test-arrange` skill'i temiz-data + Single ön-gereksinim
+    // payload'larını doldurur. ASSERT BURAYA KONMAZ (owned'da kalır — T-2.2). Op-handler seam deseninin aynısı.
+    static string TestArrangeSeam(string scope, string name) =>
+        $$"""
+        using {{Root}}.Tests;
+
+        namespace {{Root}}.Tests.{{scope}};
+
+        // ARRANGE human-seam ({{name}}): temiz-data + ön-gereksinim payload'ları — insan/LLM doldurur. gen ezmez (WriteIfAbsent).
+        public partial class {{name}}Tests
+        {
+            partial void Arrange{{name}}()
+            {
+                // Arrange {{name}}: doldurulacak — temiz-data + Single ön-gereksinim payload'ları
+            }
+        }
+
+        """;
+
+    // ── test-projesi shell (T-2.4): HumanShell csproj (yoksa-üret, asla ezilmez — App.csproj deseni) ──
+    // net10.0 xUnit test SDK + App.csproj ProjectReference. Owned `tests/gen/**/*.g.cs` + seam `tests/src/**/*.Logic.cs`
+    // SDK default-glob ile derlenir (proje kökü <out>/tests/ altındaki tüm *.cs). Versiyonlar tests/Gen.Tests ile eşleşir.
+    // App.csproj <out>/App.csproj'ta → tests/'ten görece yol `../App.csproj`.
+    static string TestsCsproj() =>
+        """
+        <Project Sdk="Microsoft.NET.Sdk">
+
+          <PropertyGroup>
+            <TargetFramework>net10.0</TargetFramework>
+            <Nullable>enable</Nullable>
+            <ImplicitUsings>enable</ImplicitUsings>
+            <IsPackable>false</IsPackable>
+          </PropertyGroup>
+
+          <ItemGroup>
+            <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+            <PackageReference Include="xunit" Version="2.9.3" />
+            <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+          </ItemGroup>
+
+          <ItemGroup>
+            <ProjectReference Include="../App.csproj" />
+          </ItemGroup>
+
+        </Project>
+        """;
+
+    // ── ASSERT üretimi (T-2.2): contract-türevli field-seviyesi assertion (LLM DEĞİL → anti-circularity §3d) ──
+    // RunSequence op'larının Business.Effects'i + (taban) WriteSet/access'inden derlenir. ExprBuild ile değer render
+    // edilir (predicate emisyonuyla aynı machinery; elle string-concat YOK → kaçış/literal-tip güvenli).
+    //   calculate (target=[Entity,field]) → Assert.Equal(<expr|text>, Fixture.Get<Entity>().Field);
+    //   create    (target="Entity")       → Assert.NotNull(Fixture.Get<Entity>());  (WriteSet tabanıyla örtüşür)
+    //   send      → op.Emits üzerinden event-emit (boşsa minimal yorum-anchor; davranışsal harness sonra)
+    //   perform   (target="Op")           → downstream op-çağrı (minimal/compilable)
+    //   WriteSet entity'leri              → varlık tabanı (Kapı 0 access-authority); field/create ile örtüşen ATLANIR
+    //   op.Throws                         → negatif yol yorum-anchor'ı (minimum; ayrı [Fact] yok — T-2.2 scope dışı)
+    static string AssertBlock(IReadOnlyList<string> runSeq, IReadOnlyList<string> writeSet,
+        IReadOnlyDictionary<string, GmOperation> opById)
+    {
+        var sb = new StringBuilder();
+        var asserted = new HashSet<string>(StringComparer.Ordinal);   // varlık tabanı dedup (yalnız ordinal listeler gezilir)
+        var throwsAnchors = new StringBuilder();
+
+        foreach (var opId in runSeq)   // RunSequence ordinal → determinizm
+        {
+            if (!opById.TryGetValue(opId, out var op)) continue;
+            foreach (var eff in (IReadOnlyList<ContractEffect>?)op.Business?.Effects ?? Array.Empty<ContractEffect>())   // operations.json effect sırası korunur
+            {
+                switch (eff.Kind)
+                {
+                    case "calculate" when TryEntityField(eff.Target, out var entity, out var field):
+                        var value = EffectValue(eff);
+                        if (value is null) { MarkExistence(sb, entity, asserted); break; }   // değersiz effect → varlık tabanına düş (graceful)
+                        sb.Append($"        Assert.Equal({value}, Fixture.Get<{entity}>().{Pascal(field)});\n");
+                        asserted.Add(entity);
+                        break;
+                    case "create" when TryEntity(eff.Target, out var created):
+                        MarkExistence(sb, created, asserted);
+                        break;
+                    case "send":
+                        foreach (var ev in op.Op.Emits)   // emits boşsa hiç satır yok → aşağıda anchor
+                            sb.Append($"        Assert.True(Fixture.Emitted(\"{ev}\"));   // send-effect: event-emit\n");
+                        if (op.Op.Emits.Count == 0)
+                            sb.Append($"        // send-effect ({opId}): event-emit — emits boş (davranışsal harness sonra).\n");
+                        break;
+                    case "perform" when TryEntity(eff.Target, out var downstream):
+                        sb.Append($"        Assert.True(Fixture.Performed(\"{downstream}\"));   // perform-effect: downstream op-çağrı\n");
+                        break;
+                }
+            }
+            // op.Throws → negatif yol yorum-anchor'ı (minimum; T-2.2 ayrı negatif [Fact] üretmez — scope dışı).
+            foreach (var ex in op.Op.Throws)
+                throwsAnchors.Append($"        // negatif yol ({opId}): '{ex}' fırlatıldığında effect uygulanmaz (negatif test sonra).\n");
+        }
+
+        // varlık tabanı (Kapı 0 access-authority): field/create ile örtüşmeyen WriteSet entity'leri.
+        foreach (var entity in writeSet)
+            MarkExistence(sb, entity, asserted);
+
+        if (throwsAnchors.Length > 0) sb.Append(throwsAnchors);
+        if (sb.Length == 0) sb.Append($"        // effect/WriteSet yok → bu op-zinciri için field-assert üretilmedi.\n");
+        return sb.ToString();
+    }
+
+    // WriteSet/create varlık tabanı: aynı entity'ye iki kez Assert.NotNull üretme (asserted seti dedup).
+    static void MarkExistence(StringBuilder sb, string entity, HashSet<string> asserted)
+    {
+        if (!asserted.Add(entity)) return;
+        sb.Append($"        Assert.NotNull(Fixture.Get<{entity}>());\n");
+    }
+
+    // Effect değeri (C# ifadesi): Expr (ExprNode) varsa ExprBuild render'ı; yoksa Text literal'i; ikisi de yoksa null.
+    static string? EffectValue(ContractEffect eff)
+    {
+        if (eff.Expr is not null) return Gen.Core.Predicate.ExprBuild.Build(eff.Expr).Expr;
+        if (eff.Text is not null) return TextLiteral(eff.Text);
+        return null;
+    }
+
+    // Ham text'i ('iptal' tek-tırnaklı veya düz) güvenli C# string literal'ine çevir (Expr yoksa fallback; nadir).
+    static string TextLiteral(string text)
+    {
+        var t = text.Trim();
+        if (t.Length >= 2 && t[0] == '\'' && t[^1] == '\'') t = t[1..^1];
+        return "\"" + t.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+    }
+
+    // ContractEffect.Target toleranslı parse (JsonElement? — string VEYA path dizisi).
+    // Dizi [Entity, field] → entity+field; field yoksa false.
+    static bool TryEntityField(JsonElement? target, out string entity, out string field)
+    {
+        entity = field = "";
+        if (target is not { } el) return false;
+        if (el.ValueKind == JsonValueKind.Array && el.GetArrayLength() >= 2)
+        {
+            entity = el[0].GetString() ?? "";
+            field = el[1].GetString() ?? "";
+            return entity.Length > 0 && field.Length > 0;
+        }
+        return false;
+    }
+
+    // Target tek-entity (string "Entity" VEYA tek-elemanlı dizi). create/perform için.
+    static bool TryEntity(JsonElement? target, out string entity)
+    {
+        entity = "";
+        if (target is not { } el) return false;
+        entity = el.ValueKind switch
+        {
+            JsonValueKind.String => el.GetString() ?? "",
+            JsonValueKind.Array when el.GetArrayLength() >= 1 => el[0].GetString() ?? "",
+            _ => ""
+        };
+        return entity.Length > 0;
+    }
+
+    static string Pascal(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     // ── dosya yazımı (regeneration sözleşmesi) ──────────────────────────
     // Bu run'da yazılan Generated dosyaları (prune + provenance için). ThreadStatic:
@@ -1083,6 +1330,8 @@ public static class DotnetEmitter
             <TargetFramework>net10.0</TargetFramework>
             <Nullable>enable</Nullable>
             <ImplicitUsings>enable</ImplicitUsings>
+            <!-- App SDK default-glob'u tests/ ağacını YUTMASIN (ayrı xUnit Tests.csproj derler; App'te xunit ref yok). -->
+            <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
           </PropertyGroup>
 
           <!-- üreteç-sahibi paket manifesti; koşullu (fresh clone / mid-wipe build'i kırmasın) -->
