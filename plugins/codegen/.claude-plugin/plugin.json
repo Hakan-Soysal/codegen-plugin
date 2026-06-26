@@ -1,7 +1,7 @@
 {
   "name": "codegen",
   "description": "base-dotnet-rest skill (techgen-dotnet üreticisi, .NET/C# REST): aile-nötr capability descriptor (capability.json) ile kendini tanıtan ([dsl-generator]) LLM-doldurucu. 6 faz (bağlam-derleme → arketip → gap-gate → doldur → verify-loop → rapor); gen/** yazma-yasağı; bilinmeyen gap'te improvise YASAK (DUR+sor); build + conformance (deterministik oracle, LLM-judge yasak) ile doğrular. Pair: aynı repodaki statik C# üreteç (src/Gen.*) + conformance-adapter.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": {
     "name": "Hakan Soysal",
     "email": "66327932+Hakan-Soysal@users.noreply.github.com"
