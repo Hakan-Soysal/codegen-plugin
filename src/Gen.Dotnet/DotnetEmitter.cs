@@ -226,15 +226,18 @@ public static class DotnetEmitter
                 report.Unsupported("test-prereq", $"{scope}_{name}", $"ön-gereksinim belirsiz/eksik: {offenders}");
                 return;   // T-3.2 DUR-marker
             }
+            // T-2.6: op-başı tipli ARRANGE request-builder kümesi (prereq creator + RunSequence). owned DECLARE + seam IMPLEMENT
+            // AYNI listeden türer → "çağrıldı-ama-bildirilmedi" / "bildirildi-ama-implemente-edilmedi" linkage hatası imkânsız.
+            var builders = ArrangeBuilders(prereqs, runSeq, opById);
             var scopeDir = Path.Combine(testsGen, scope);
             Directory.CreateDirectory(scopeDir);      // WriteAlways dizin oluşturmaz → burada hazırla
-            WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById, gm));
+            WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById, gm, builders));
             report.Realized("test", $"{scope}_{name}");   // T-3.1: yalnız emit edilen (all-Single) testler realized; id-şeması §10 (Process_/OrphanFlow_/OrphanOp_)
-            // ARRANGE human-seam (T-2.3): owned iskeletin DECLARE ettiği `partial void Arrange{name}()` gövdesi.
-            // WriteIfAbsent → insan/LLM dolumu (M4 test-arrange) tekrar-üretimde EZİLMEZ. Yalnız ARRANGE; ASSERT owned'da.
+            // ARRANGE human-seam (T-2.6): owned iskeletin DECLARE ettiği op-başı tipli `partial {Req} Arrange_{Op}()` gövdeleri.
+            // WriteIfAbsent → insan/LLM dolumu (M4 test-arrange) tekrar-üretimde EZİLMEZ. Yalnız ARRANGE request; ASSERT owned'da.
             var seamScopeDir = Path.Combine(testsSrc, scope);
             Directory.CreateDirectory(seamScopeDir);  // WriteIfAbsent dizin oluşturmaz → burada hazırla
-            WriteIfAbsent(Path.Combine(seamScopeDir, $"{name}.Logic.cs"), TestArrangeSeam(scope, name));
+            WriteIfAbsent(Path.Combine(seamScopeDir, $"{name}.Logic.cs"), TestArrangeSeam(scope, name, builders));
         }
 
         // TestPlan zaten ordinal-sıralı → ek sıralama yok (determinizm korunur).
@@ -249,39 +252,64 @@ public static class DotnetEmitter
     // Tüm ön-gereksinimler Single mı (boş = evet)? Single-dışı varsa iskelet emit edilmez (Q5/DUR).
     static bool AllSinglePrereqs(IReadOnlyList<PrereqStep> prereqs) => prereqs.All(p => p.Kind == PrereqKind.Single);
 
+    // ── T-2.6: op-başı tipli ARRANGE request-builder kümesi ──
+    // prereq creator op'ları + RunSequence op'ları, İLK-GÖRÜNÜM sırasıyla dedup (TestPlan ordinal → determinizm).
+    // Her op için tipli request adı (RequestName: {Op}Command/{Op}Query). owned iskelet bu listeden `partial {Req} Arrange_{Op}()`
+    // DECLARE eder; seam aynı listeden IMPLEMENT eder → partial-method linkage garanti. Aynı op birden çok kez geçerse tek builder.
+    static IReadOnlyList<(string Op, string Req)> ArrangeBuilders(
+        IReadOnlyList<PrereqStep> prereqs, IReadOnlyList<string> runSeq,
+        IReadOnlyDictionary<string, GmOperation> opById)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var list = new List<(string Op, string Req)>();
+        void Add(string? opId)
+        {
+            if (opId is null || !seen.Add(opId)) return;
+            if (opById.TryGetValue(opId, out var op)) list.Add((opId, RequestName(op)));   // map'te yoksa builder yok → çağrı parametresiz (graceful)
+        }
+        foreach (var p in prereqs) Add(p.CreatorOp);
+        foreach (var op in runSeq) Add(op);
+        return list;
+    }
+
     // 3-faz owned xUnit iskeleti. `WriteAlways` GenHeader (auto-generated + #nullable) ekler → içerik using/namespace ile başlar.
     static string TestSkeleton(string scope, string name, IReadOnlyList<string> runSeq, IReadOnlyList<PrereqStep> prereqs,
-        IReadOnlyList<string> writeSet, IReadOnlyDictionary<string, GmOperation> opById, GenerationModel gm)
+        IReadOnlyList<string> writeSet, IReadOnlyDictionary<string, GmOperation> opById, GenerationModel gm,
+        IReadOnlyList<(string Op, string Req)> builders)
     {
         var sb = new StringBuilder();
-        // ön-gereksinim çağrıları (yalnız Single creator op'lar; topo-sıra TestPlan'da korunur).
+        // op-başı tipli ARRANGE builder var mı? → RunAsync çağrısına `Arrange_{Op}()` argümanı geç (yoksa parametresiz, graceful).
+        var hasBuilder = new HashSet<string>(builders.Select(b => b.Op), StringComparer.Ordinal);
+        string ArgFor(string op) => hasBuilder.Contains(op) ? $"Arrange_{op}()" : "";
+        // ön-gereksinim çağrıları (yalnız Single creator op'lar; topo-sıra TestPlan'da korunur) — tipli request ile beslenir.
         var prereqLines = new StringBuilder();
         foreach (var p in prereqs)
-            prereqLines.Append($"        await Fixture.RunAsync<{p.CreatorOp}Handler>();   // ön-gereksinim: {p.Entity}\n");
-        // RunSequence op çağrıları (process→flow→op sırası).
+            prereqLines.Append($"        await Fixture.RunAsync<{p.CreatorOp}Handler>({ArgFor(p.CreatorOp!)});   // ön-gereksinim: {p.Entity}\n");
+        // RunSequence op çağrıları (process→flow→op sırası) — tipli request ile beslenir.
         var runLines = new StringBuilder();
         foreach (var op in runSeq)
-            runLines.Append($"        await Fixture.RunAsync<{op}Handler>();\n");
+            runLines.Append($"        await Fixture.RunAsync<{op}Handler>({ArgFor(op)});\n");
 
         sb.Append($"using {Root}.Tests;\n");
         sb.Append("using Xunit;\n\n");
         sb.Append($"namespace {Root}.Tests.{scope};\n\n");
-        sb.Append($"// owned test iskeleti (üreteç-sahibi; her run yenilenir). ARRANGE gövdesi seam'de (T-2.3).\n");
+        sb.Append($"// owned test iskeleti (üreteç-sahibi; her run yenilenir). ARRANGE request gövdeleri seam'de (T-2.6).\n");
         sb.Append($"public partial class {name}Tests\n{{\n");
-        // ARRANGE seam çağrısı: temiz-data + ön-gereksinim payload'larını insan/LLM doldurur (gövde T-2.3).
-        sb.Append($"    partial void Arrange{name}();\n\n");
+        // op-başı tipli ARRANGE request-builder DECLARE: gövdeyi seam implemente eder (LLM `return new {Op}Command(...)` doldurur).
+        foreach (var (op, req) in builders)
+            sb.Append($"    private partial {req} Arrange_{op}();\n");   // CS8796: dönüş-tipli partial method açık erişim belirteci ister
+        if (builders.Count > 0) sb.Append("\n");
         sb.Append($"    [Fact]\n");
         sb.Append($"    public async Task Runs()\n    {{\n");
         sb.Append($"        // 1) temiz data — izole/sıfırlanmış state (Fixture hook; base fixture T-2.4).\n");
-        sb.Append($"        await Fixture.ResetAsync();\n");
-        sb.Append($"        Arrange{name}();   // ARRANGE seam (T-2.3): temiz-data + ön-gereksinim payload'ları\n\n");
+        sb.Append($"        await Fixture.ResetAsync();\n\n");
         if (prereqLines.Length > 0)
         {
-            sb.Append($"        // 2a) ön-gereksinimler (Single creator op'ları)\n");
+            sb.Append($"        // 2a) ön-gereksinimler (Single creator op'ları) — tipli ARRANGE request payload'ı ile\n");
             sb.Append(prereqLines);
             sb.Append("\n");
         }
-        sb.Append($"        // 2b) RunSequence — process→flow→op çağrı sırası\n");
+        sb.Append($"        // 2b) RunSequence — process→flow→op çağrı sırası — tipli ARRANGE request payload'ı ile\n");
         if (runLines.Length > 0) sb.Append(runLines);
         sb.Append("\n");
         // 3) ASSERT — üreteç-sahibi, contract-çapalı (effects/access/throws). LLM yargısı YOK (anti-circularity §3d).
@@ -291,27 +319,30 @@ public static class DotnetEmitter
         return sb.ToString();
     }
 
-    // ── ARRANGE human-seam (T-2.3): tek LLM-dolumu nokta (anti-circularity §3c/§3d) ──
-    // owned iskelet `partial void Arrange{name}();` DECLARE eder (TestSkeleton); gövdesi BURADA.
-    // İmza owned bildirimle birebir aynı (parametresiz `void`) → partial-method linkage. `WriteIfAbsent` (ezilmez).
-    // Yalnız marker yorumu (`doldurulacak`) — M4 `test-arrange` skill'i temiz-data + Single ön-gereksinim
-    // payload'larını doldurur. ASSERT BURAYA KONMAZ (owned'da kalır — T-2.2). Op-handler seam deseninin aynısı.
-    static string TestArrangeSeam(string scope, string name) =>
-        $$"""
-        using {{Root}}.Tests;
-
-        namespace {{Root}}.Tests.{{scope}};
-
-        // ARRANGE human-seam ({{name}}): temiz-data + ön-gereksinim payload'ları — insan/LLM doldurur. gen ezmez (WriteIfAbsent).
-        public partial class {{name}}Tests
+    // ── ARRANGE human-seam (T-2.6): op-başı tipli request-builder gövdeleri (anti-circularity §3c/§3d) ──
+    // owned iskelet her op için `partial {Req} Arrange_{Op}();` DECLARE eder (TestSkeleton); gövdeleri BURADA.
+    // İmzalar owned bildirimlerle birebir aynı (aynı builders listesi) → partial-method linkage. `WriteIfAbsent` (ezilmez).
+    // C# kuralı: dönüş-tipli partial method İMPLEMENTASYON ZORUNLU → her DECLARE'ın karşılığı burada (default! stub derlenir).
+    // Stub `return default!;` → null → Fixture.RunAsync null-fallback (default-instantiate) ile derlenir VE koşar; marker `doldurulacak`
+    // M4 `test-arrange` skill'inin `return new {Op}Command(...);` ile dolduracağı noktayı işaretler. ASSERT BURAYA KONMAZ (owned'da — T-2.2).
+    static string TestArrangeSeam(string scope, string name, IReadOnlyList<(string Op, string Req)> builders)
+    {
+        var sb = new StringBuilder();
+        sb.Append($"using {Root}.Tests;\n\n");
+        sb.Append($"namespace {Root}.Tests.{scope};\n\n");
+        sb.Append($"// ARRANGE human-seam ({name}): op-başı tipli request payload'ları — insan/LLM doldurur. gen ezmez (WriteIfAbsent).\n");
+        sb.Append($"public partial class {name}Tests\n{{\n");
+        foreach (var (op, req) in builders)
         {
-            partial void Arrange{{name}}()
-            {
-                // Arrange {{name}}: doldurulacak — temiz-data + Single ön-gereksinim payload'ları
-            }
+            sb.Append($"    private partial {req} Arrange_{op}()\n");   // CS8796: dönüş-tipli partial method açık erişim belirteci ister
+            sb.Append($"    {{\n");
+            sb.Append($"        // Arrange {op} request: doldurulacak — `return new {req}(...)` ile gerçek payload (default! → null → Fixture default-instantiate)\n");
+            sb.Append($"        return default!;\n");
+            sb.Append($"    }}\n\n");
         }
-
-        """;
+        sb.Append("}\n");
+        return sb.ToString();
+    }
 
     // ── test-projesi shell (T-2.4): HumanShell csproj (yoksa-üret, asla ezilmez — App.csproj deseni) ──
     // net10.0 xUnit test SDK + App.csproj ProjectReference. Owned `tests/gen/**/*.g.cs` + seam `tests/src/**/*.Logic.cs`
