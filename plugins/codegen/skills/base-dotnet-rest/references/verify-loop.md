@@ -1,7 +1,7 @@
-# Verify-loop & oracle — iki-kapılı doğrulama + retry/fresh-start + halüsinasyon kapısı (T5.5)
+# Verify-loop & oracle — üç-kapılı doğrulama + retry/fresh-start + halüsinasyon kapısı (T5.5)
 
 > **Bu dosya filler'ın Faz 5 mekaniğidir** (tasarım kaynağı `SEAM-DOLDURMA-SKILL-TASARIM.md` §B.5
-> + §1.5). SKILL.md Faz 5 yalnız iki-kapılı oracle'ı **atfeder + sırasını sabitler**; mekanik
+> + §1.5). SKILL.md Faz 5 yalnız üç-kapılı oracle'ı **atfeder + sırasını sabitler**; mekanik
 > **buradadır**.
 >
 > **Değişmez (her oturumda geçerli):** **build gerekli ama yetersiz.** `dotnet build` exit 0 bir
@@ -24,6 +24,14 @@ bir oracle ile doğrulamak. Bu loop (b)'yi zorunlu, (a)'yı imkânsız kılar.
 (adapter bir op'u çağırır + dönen `Result<T>`'yi inceler; assertion contract-türevli SPEC'tedir).
 **LLM-judge YASAK** — bir seam'in doğruluğu LLM'in yargısına bırakılmaz; deterministik testin
 PASS/FAIL'ine bırakılır.
+
+> **LLM-judge yasağı ≠ bağımsız adversarial denetim yasağı (Kapı 3, §1.6).** Yasak olan, *contract-fidelity'nin
+> PASS/FAIL'ini* ("seam doğru mu?") LLM yargısıyla DEĞİŞTİRMEKtir. Kapı 3 bunu yapmaz: o, build+conformance'ın
+> **yapısal olarak göremediği** bilinen defect-sınıfları (concurrency/lost-update, eksik boundary-validation,
+> state-precondition, idempotency-ordering, eksik audit-alanı, perf anti-pattern) için **EK savunma katmanıdır** —
+> "seam doğru" demez, "şu defect-sınıfı **var/yok**" der ve bulguları gate-felsefesiyle (fix **veya** GAP)
+> dispozisyona uğratır. Conformance "construct'ı karşılıyor mu" (deterministik); Kapı 3 "bilinen defect-sınıflarından
+> arınmış mı" (adversarial) — **iki farklı soru, biri ötekinin yerini almaz.**
 
 ---
 
@@ -55,10 +63,12 @@ yazma-etki kümesinin tam kapsanmasının deterministik garantisidir (davranış
 
 ---
 
-## 1. İki-kapılı oracle  [§B.5]
+## 1. Üç-kapılı oracle  [§B.5]
 
-Her doldurulan seam — Kapı 0 (access-coverage, §0.5) geçtikten sonra — **iki kapıdan** geçer. Birincisi
-geçmeden ikinciye geçilmez; her ikisi de (+ Kapı 0) geçmeden seam "bitti" SAYILMAZ.
+Her doldurulan seam — Kapı 0 (access-coverage, §0.5) geçtikten sonra — **üç kapıdan** geçer (build →
+conformance → bağımsız adversarial denetim). Bir önceki geçmeden sonrakine geçilmez; **üçü de** (+ Kapı 0)
+geçmeden seam "bitti" SAYILMAZ. **Değişmez:** bağımsız denetleyici kontrolünden başarıyla geçmeyen
+LLM-üretilmiş seam kodu KALMAZ (Kapı 3, §1.6).
 
 ### Kapı 1 — Birincil: BUILD (zorunlu, ama yetersiz)
 
@@ -101,21 +111,86 @@ Runner spec'leri enumerate eder, `App.dll`'i `GeneratedApp` (AssemblyLoadContext
 > (T4.4, "op çağır + Result incele" harness'ı); koşum + doğrulama = aile. Filler bu loop'ta yalnız
 > **build'i koşar + conformance'ın PASS olduğunu doğrular**; spec/adapter YAZMAZ (out of scope).
 
+### Kapı 3 — Bağımsız adversarial denetim (zorunlu, son kapı)  [descriptor `audit`]
+
+> **Neden gerekli (amaç-odaklı):** build "derleniyor"u, conformance "**bildirilmiş** construct'ı karşılıyor"u
+> garantiler. Ama ikisi de **bildirilmemiş ama gerçek** defect-sınıflarını göremez: gen-yüzeyin token koymadığı
+> bir entity üzerinde lost-update, manifest'in hiç bildirmediği boundary-validation, durum-geçişi ön-şartı,
+> idempotency-ordering, entity'de var olup gövdenin doldurmadığı audit-alanı, unbounded query. Bunlar build0 + tüm
+> conformance-PASS iken **sessizce gemiye biner**. Kapı 3, bağımsız bir denetleyicinin tam da bu sınıfları
+> adversarial aramasıyla "bağımsız denetimden geçmeyen LLM-kodu kalmaz" değişmezini zorunlu kılar.
+
+**Bağımsızlık (öz-onay yasağı):** denetleyici, seam'i **YAZAN ajan DEĞİLDİR** — ayrı, temiz bağlam (subagent).
+Yalnız **seam kodu + contract/gen yüzeyini** (manifest/operations + ilgili `gen/**` partial'ları) görür; filler'ın
+muhakemesini/gerekçesini GÖRMEZ (yazan kendi işini onaylayamaz = reward-hacking). Denetim **dosya başına × odak
+başına** parçalanır: her doldurulan `*.Logic.cs` için üç odak (`descriptor.audit.lenses`: integrity · security ·
+performance) ayrı denetleyiciye verilir (kullanıcının kendi adversarial-audit yöntemiyle simetrik).
+
+**Yöntem (adversarial — "kusur yok"u değil "kusur var"ı varsay):**
+- **Default kusurlu.** Denetleyici seam'i kırmaya çalışır; "iyi görünüyor" yetmez.
+- **Mitigation'ı kanıtla.** Her aday-bulguda, savunmanın gerçekten YOK olduğunu **kod-kanıtıyla** doğrula (ilgili
+  guard/token/try-catch/tx grep'le yok mu) — false-positive'i burada ele; var olan mitigation'ı "bulgu" sayma.
+- **Etkiyi persisted-state'ten gözle.** "HTTP 200 döndü" doğrulama DEĞİL — etkinin (Remaining düştü mü, Status
+  geçti mi, audit-alanı doldu mu) **geri-okunabilir** olduğunu iste; salt-status assert eden seam/test zayıftır.
+
+**Kontrol bakış açısı — üç lens (genel kontrol soruları, bulgu-listesi DEĞİL):**
+
+- **Integrity / correctness:**
+  - read-modify-write edilen her mutable entity'de lost-update koruması (concurrency token / guarded-update /
+    serializable tx) **var mı**? Yoksa → çoğu kez yapısal (entity token'ı `gen/**`'de).
+  - durum geçişleri **ön-şart denetimli** mi (terminal/refunded/expired state'e geçersiz yeniden-geçiş engelli)?
+  - çok-adımlı effect **atomik** mi (kısmi-commit orphan/lockout üretmiyor)?
+  - idempotency anahtarı **commit-coupled** mı (consume-before-commit YOK; başarısızlıkta release/transaction-bağlı)?
+  - client-girdisi persist edilmeden önce **boundary-validation** (null/empty/sign/range/length) geçiyor mu?
+  - durum değişiminde eşlik eden **audit/timestamp alanları** (entity'de mevcut olanlar) dolduruluyor mu?
+  - iş-tarihi/`UtcNow` **timezone-normalize** mi (off-by-one gün/pencere yok)?
+- **Security:**
+  - her path **authz** denetimli mi; trust-boundary'de input doğrulanıyor mu?
+  - **hardcoded secret / default credential** veya guard'sız seed YOK?
+  - kimlik/login yüzeyinde **brute-force / enumeration** (timing/rate) sınırı düşünülmüş mü?
+  - hata-mapping **yapısal** mı (opaque 500 / info-leak yerine NotValid/404/409)?
+- **Performance:**
+  - list/query **Take-cap / pagination**'lı mı (unbounded tablo yüklemesi YOK)?
+  - read-only sorgu **AsNoTracking + projeksiyon** mu (gereksiz tracked full-entity yok)?
+  - **CancellationToken** async EF çağrılarına propagate mi?
+  - toplu durum-geçişi **set-based** (`ExecuteUpdateAsync`) mı, satır-satır materialize değil?
+  - gereksiz çoklu round-trip / N+1 yok mu?
+
+**Dispozisyon (detect ≠ fix — `improvise YASAK`'a sadık):** her bulgu **sahibine** göre ayrılır:
+- **Seam-fixable** (orkestrasyon: yanlış kanonik-sıra, eksik try/catch, bağlanmamış ama **mevcut** `Validation_N`/
+  `Rule_N`, entity'de var olup doldurulmamış audit-alanı) → `*.Logic.cs`'te **DÜZELT** → **tüm loop'u** (build →
+  conformance → Kapı 3) yeniden koş.
+- **Yapısal** — sahibi `gen/**` (entity token/unique-constraint/DI-config/store-API), **manifest** (hiç bildirilmemiş
+  validation/rule/invariant *declaration*'ı), ya da **`Code/` host** (seed/exception-middleware) → seam BUNU **icat
+  ederek düzeltemez** → **GAP** → `gap-protocol.md` §B.4.3 (DUR + kesin sun + upstream'e route: techgen binary /
+  teknik-analiz / host). **Sessizce doldurma; "düzelttim" deme.**
+
+**PASS kriteri:** üç lens'te de **açık seam-fixable bulgu = 0**. Yapısal GAP'ler **route + rapor** edilir (Faz 6);
+bunlar "fix" SAYILMAZ ama açıkça bildirilir — gemiye sessizce binmez. Kapı 3 PASS olmadan seam "bitti" değildir.
+
+> **Kapı 3 LLM-judge DEĞİL (§0 carve-out):** "seam contract'a sadık mı" yargısını LLM'e bırakmıyoruz (o
+> conformance'ın, deterministik). Kapı 3 ayrı bir soruyu — "bilinen defect-sınıflarından arınmış mı" — bağımsız
+> adversarial bir gözle sorar ve bulgularını **fix-veya-GAP** olarak dispozisyona uğratır; bir seam'i "doğru" ilan
+> ETMEZ. Conformance'ın yerini almaz, ona EK gelir.
+
 ---
 
 ## 2. Retry + fresh-start (debugging-decay sınırı)  [§B.5]
 
-Build veya conformance düşerse loop **sınırlı** düzeltme dener — **sonsuz retry YOK** (kalite düşer,
-debugging-decay). Sıralama deterministik:
+Build, conformance veya Kapı 3 (**seam-fixable** bulgu) düşerse loop **sınırlı** düzeltme dener — **sonsuz
+retry YOK** (kalite düşer, debugging-decay). Sıralama deterministik:
 
 | Adım | Bütçe | Davranış |
 |---|---|---|
-| **1. Build-fix iterasyonu** | seam başına **≤3** | Build/conformance FAIL → düzelt → yeniden koş. En fazla **3 retry**. |
+| **1. Build-fix iterasyonu** | seam başına **≤3** | Build/conformance/Kapı 3-seam-fixable FAIL → düzelt → **tüm üç kapıyı** yeniden koş. En fazla **3 retry**. |
 | **2. Fresh-start** | **1 kez** | ≤3 iterasyon hâlâ geçmiyorsa → stub'ı geri-üret, seam'i **sıfırdan** bir kez doldur, yeniden koş. |
 | **3. Gap → DUR** | — | Fresh-start da geçmiyorsa → bu bir **gap**'tir → **T5.2 gap-protocol.md §B.4.3** (Faz 4b: DUR + kullanıcıya sor). **improvise YOK.** |
 
 - **≤3 + fresh-start sınırı KESİNDİR.** 3 build-fix + 1 fresh-start'tan sonra debugging durur; loop
   kendini "bir daha denerim" diye uzatmaz.
+- **Kapı 3 YAPISAL bulgusu retry-bütçesi TÜKETMEZ.** Yapısal bulgu (gen/manifest/host sahibi) bir "düzelt-
+  yeniden-koş" döngüsü DEĞİL — seam onu icat ederek gideremez → **anında GAP** (T5.2'ye route + Faz 6 rapor).
+  Yalnız **seam-fixable** Kapı 3 bulguları ≤3 build-fix bütçesine girer.
 - **Retry-bitince → gap.** Çözüm bu dosyada DEĞİL: retry-exhausted hand-off **T5.2**'ye devredilir
   (`${CLAUDE_SKILL_DIR}/references/gap-protocol.md` §B.4.3 — Bilinmeyen gap → DUR, sor, kaydet). Bu
   dosya yalnız "ne zaman gap'e düşülür"ü tanımlar; DUR/sor/kayıt mekaniği T5.2'dir.
@@ -176,8 +251,16 @@ olduğundan paket onu gizleyemez (A3) — icat edilmiş davranış conformance't
 ## 5. Anti-patterns (yapma)
 
 - **build-pass'i "bitti" SAYMA** → build gerekli ama YETERSİZ; conformance (Kapı 2) zorunlu (Bulgu #3).
-- **LLM'e "seam doğru mu?" DİYE SORDURMA** → oracle **deterministik** (gerçek execution + assert);
-  **LLM-judge ASLA**. Doğruluk testin PASS/FAIL'idir, LLM'in yargısı değil.
+- **build0 + conformance-PASS'i "bitti" SAYMA** → ikisi de **bildirilmemiş** defect-sınıflarını (lost-update,
+  eksik validation, perf anti-pattern, eksik audit-alanı) göremez; bağımsız adversarial denetim (Kapı 3) zorunlu.
+  **Bağımsız denetimden geçmeyen LLM-seam'i KALMAZ.**
+- **Kendi yazdığın seam'i kendin DENETLEME** → Kapı 3 denetleyicisi seam'i yazan ajan DEĞİL; ayrı/temiz bağlam.
+  Yazan kendi işini onaylarsa = öz-onay/reward-hacking.
+- **Kapı 3 yapısal bulgusunu seam'de İCAT ederek "düzeltme"** → sahibi gen/manifest/host ise → GAP → route + rapor
+  (`improvise YASAK`). Sessizce doldurup "düzelttim" deme.
+- **LLM'e "seam doğru mu?" DİYE SORDURMA** → contract-fidelity oracle'ı **deterministik** (gerçek execution +
+  assert); **LLM-judge ASLA**. (Kapı 3 bu yasağı ihlal etmez: "doğru mu" değil "şu defect-sınıfı var/yok" sorar —
+  §0 carve-out.)
 - **SONSUZ RETRY YAPMA** → seam başına **≤3** build-fix + **1** fresh-start; sonra **gap → DUR**
   (T5.2). Loop kendini uzatmaz (debugging-decay).
 - **Conformance assertion'ını PAKETTE kurma** → assertion SPEC'tedir (T3.3, contract-türevli); paket

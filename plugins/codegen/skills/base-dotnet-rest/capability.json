@@ -103,5 +103,13 @@
   "conformance": {
     "adapter": "${CLAUDE_SKILL_DIR}/conformance",
     "run": "dotnet ${CLAUDE_SKILL_DIR}/conformance/Conformance.dll {appDll} {specsPath}"
+  },
+  "audit": {
+    "principle": "Bağımsız adversarial denetimden geçmeyen LLM-üretilmiş seam 'bitti' DEĞİL. (Kapı 3)",
+    "independence": "denetleyici = seam'i YAZAN ajan DEĞİL; ayrı/temiz bağlam (subagent). Yalnız seam kodu + contract/gen yüzeyini görür, filler'ın muhakemesini DEĞİL. Dosya başına × odak başına bir denetleyici.",
+    "lenses": ["integrity", "security", "performance"],
+    "method": "adversarial — kusur ARA (default: kusurlu); her bulguda mitigation'ın kod-kanıtıyla gerçekten YOK olduğunu doğrula (false-positive ele); etkiyi persisted-state geri-okuyarak gözle (HTTP status yetmez).",
+    "disposition": "bulgu seam-fixable (orkestrasyon: ordering/try-catch/bağlanmamış üye/eksik state-alanı) → düzelt + tüm loop'u yeniden koş (bounded retry). Yapısal (gen/** entity·config | manifest declaration | Code/ host) → seam DÜZELTEMEZ (improvise YASAK) → GAP → gap-protocol → upstream'e route.",
+    "pass": "üç lens'te de açık seam-fixable bulgu = 0 (yapısal GAP'ler route+rapor edilir, 'fix' SAYILMAZ). LLM-judge DEĞİL: Kapı 3 'seam doğru' demez, 'şu defect-sınıfı var/yok' der — conformance'ın (contract-fidelity) yerini ALMAZ, bilinen defect-sınıflarına EK savunma katmanıdır."
   }
 }

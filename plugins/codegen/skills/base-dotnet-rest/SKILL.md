@@ -5,7 +5,8 @@ description: >-
   (`gen/**`) bir .NET projesindeki BOŞ insan-seam'lerini (`{op}Handler.Logic.cs` ve T4-sonrası
   tek-tip in-place trigger/subscription/boundary seam'leri) arketip-bazlı uzman playbook'larla,
   kanonik sırada, contract'a SADIK biçimde doldurur; her seam'i `dotnet build` + conformance
-  oracle ile doğrular. Bağlam-derleme → arketip → gap-gate → doldur → verify → rapor fazlarını
+  oracle + bağımsız adversarial denetim (integrity/security/performance) ile doğrular — bağımsız
+  denetimden geçmeyen LLM-seam kalmaz. Bağlam-derleme → arketip → gap-gate → doldur → verify → rapor fazlarını
   yürütür. `describe` argümanıyla çağrılırsa YALNIZ kendi `capability.json` descriptor'ını döndürür
   (keşfin self-describe sözleşmesi; üretim YAPMAZ). Şu durumlarda kullan: keşif/aile bu paketi
   seçip devrettiğinde — "seam doldur", "Logic.cs doldur", "iş mantığını yaz", "statik üretilmiş
@@ -290,12 +291,23 @@ söylemez; reward-hacking riski).
 - **İkincil (conformance):** deterministik oracle (gerçek execution+assert; LLM-judge ASLA) —
   throws→negatif, invariant→property, validation/rule→sınır, idempotent→replay, saga→
   failure-injection+compensate, pagination→`Page<T>`, roles→403.
-- **Retry:** seam başına ≤3 build-fix → sonra fresh-start → o da olmazsa gap → DUR+sor.
+- **Kapı 3 (bağımsız adversarial denetim — son kapı, zorunlu):** build + conformance **bildirilmemiş**
+  defect-sınıflarını göremez (gen-yüzeyin token koymadığı lost-update, manifest'in bildirmediği boundary-
+  validation, state-precondition, idempotency-ordering, doldurulmamış audit-alanı, unbounded query). Bu yüzden
+  her doldurulan `*.Logic.cs`, **seam'i YAZMAYAN ayrı/temiz bağlamlı** bir denetleyiciden (subagent) geçer —
+  **dosya başına × odak başına** (integrity · security · performance), adversarial (kusur ara, mitigation'ın kod-
+  kanıtıyla yokluğunu doğrula, etkiyi persisted-state'ten gözle). **Dispozisyon:** seam-fixable bulgu → düzelt +
+  loop'u yeniden koş; yapısal (gen/manifest/host) bulgu → seam icat ederek DÜZELTEMEZ → GAP → route + rapor
+  (`improvise YASAK`). **Değişmez: bağımsız denetimden geçmeyen LLM-üretilmiş seam kodu KALMAZ.**
+- **Retry:** seam başına ≤3 build-fix (build/conformance/Kapı-3-seam-fixable) → sonra fresh-start → o da olmazsa
+  gap → DUR+sor. Kapı 3'ün **yapısal** bulgusu retry tüketmez → anında GAP.
 
-> **Verify-loop DETAYLARI burada DEĞİL** — iki-kapılı oracle mekaniği (build + conformance) +
-> retry/fresh-start + halüsinasyon kapısı **T5.5**'tir:
+> **Verify-loop DETAYLARI burada DEĞİL** — üç-kapılı oracle mekaniği (build + conformance + bağımsız
+> adversarial denetim) + retry/fresh-start + halüsinasyon kapısı **T5.5**'tir:
 > `${CLAUDE_SKILL_DIR}/references/verify-loop.md`. Bu faz yalnız **atfeder + sırasını sabitler**.
-> **build gerekli ama yetersiz** — conformance (deterministik oracle, LLM-judge ASLA) zorunlu.
+> **build gerekli ama yetersiz; conformance gerekli ama bildirilmemiş defect'i görmez** — Kapı 3 (bağımsız,
+> adversarial, descriptor `audit`) zorunlu. Kapı 3 LLM-judge DEĞİL (contract-fidelity'yi LLM'e sormaz; "defect-
+> sınıfı var/yok" sorar) — verify-loop §0 carve-out.
 
 ---
 
@@ -308,7 +320,10 @@ söylemez; reward-hacking riski).
 - **`ASSUMPTIONS.md` varsayımları (rung-3b):** codebase-grounded eşlemeler (NE + NEDEN-kanıt) — varsa
   madde madde özetle; insanın denetlemesi için ledger dosyasına işaret et.
 - Bilinmeyen gap → DUR olan seam'ler + kullanıcıya sorulan + (tekrar-edilebilirse) kayıt önerisi.
-- Verify sonuçları (build exit, conformance oracle).
+- Verify sonuçları (build exit, conformance oracle, **Kapı 3 bağımsız denetim** — lens başına PASS/bulgu).
+- **Kapı 3 yapısal GAP'leri (route-edilen):** seam'in icat ederek düzeltemeyeceği, sahibi gen/manifest/host
+  olan bulgular — sahibi + nereye route edildiği (techgen binary / teknik-analiz / `Code/` host) ile **açıkça**
+  listele; "fix" SAYILMAZ ama sessizce de geçilmez.
 - v1 kapsam-dışı ertelenen seam'ler (trigger/subscription/boundary) — açıkça.
 
 ---
@@ -340,4 +355,4 @@ Referans PoC, fill akışının fazlardan nasıl geçtiğini somutlaştırır:
 - `${CLAUDE_SKILL_DIR}/capability.json` — descriptor (seamPath/marker/sıra/arketip kuralları). **T1.3.**
 - `${CLAUDE_SKILL_DIR}/references/gap-protocol.md` — gap-runtime: **§0.5 fill-öncesi tüm-manifest feasibility ön-kapısı (contract-only P1–P4)** + K1–K4 detection gate + çözüm-kademesi + DUR/sor/kayıt içeriği. **T5.2.**
 - Arketip playbook'ları + few-shot doğru-doldurulmuş örnekler — **T5.3.**
-- `${CLAUDE_SKILL_DIR}/references/verify-loop.md` — iki-kapılı oracle (build + conformance, deterministik/LLM-judge yasak) + retry/fresh-start + halüsinasyon kapısı. **T5.5.**
+- `${CLAUDE_SKILL_DIR}/references/verify-loop.md` — üç-kapılı oracle (build + conformance + **bağımsız adversarial denetim / Kapı 3**: 3 lens, dosya×odak, detect≠fix dispozisyonu) + retry/fresh-start + halüsinasyon kapısı. **T5.5.**
