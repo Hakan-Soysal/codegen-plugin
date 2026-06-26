@@ -158,7 +158,7 @@ public static class DotnetEmitter
         WriteAlways(Path.Combine(gen, "Bootstrap.g.cs"), GeneratedBootstrap(gm, config, report));   // AddGenerated/MapGenerated
         WriteIfAbsent(Path.Combine(outDir, "Program.cs"), ProgramShell());          // HumanShell: yoksa-üret
 
-        EmitTests(gm, outDir, report);   // owned test iskeleti (tests/gen/**) — provenance/prune ÖNCESİ (track edilsin)
+        EmitTests(gm, outDir, report, config);   // owned test iskeleti + Fixture harness (tests/gen/**) — provenance/prune ÖNCESİ (track edilsin)
 
         WriteProvenanceAndPrune(outDir, prev);
     }
@@ -198,14 +198,18 @@ public static class DotnetEmitter
     // 3-faz: (1) temiz-data reset hook (2) ön-gereksinim + RunSequence op çağrıları (3) ASSERT placeholder (T-2.2).
     // ARRANGE gövdesi AYRI human-seam (T-2.3); burada yalnız partial-method DECLARE + CALL edilir.
     // Q5/DUR: Prerequisites'inde Single-DIŞI (Ambiguous/Missing) adım olan test → iskelet emit EDİLMEZ (T-3.2 marker).
-    static void EmitTests(GenerationModel gm, string outDir, BuildReport report)
+    static void EmitTests(GenerationModel gm, string outDir, BuildReport report, GenConfig? config = null)
     {
         if (gm.TestPlan is null) return;   // defansif (TestPlan boş-plan döner, null değil; spec'e uyum için)
         var testsDir = Path.Combine(outDir, "tests");
         Directory.CreateDirectory(testsDir);                   // WriteIfAbsent dizin oluşturmaz → burada hazırla
-        WriteIfAbsent(Path.Combine(testsDir, "Tests.csproj"), TestsCsproj());   // HumanShell (App.csproj deseni): yoksa-üret, asla ezilmez
+        WriteIfAbsent(Path.Combine(testsDir, "Tests.csproj"), TestsCsproj(config));   // HumanShell (App.csproj deseni): yoksa-üret, asla ezilmez
         var testsGen = Path.Combine(outDir, "tests", "gen");   // owned (prune'lu) test ağacı
         var testsSrc = Path.Combine(outDir, "tests", "src");   // human-seam ARRANGE ağacı (WriteIfAbsent, ezilmez)
+        Directory.CreateDirectory(testsGen);                   // WriteAlways dizin oluşturmaz → Fixture/GlobalUsings için hazırla
+        // owned execution harness + test-projesi global using (her run yenilenir; prune+provenance).
+        WriteAlways(Path.Combine(testsGen, "Fixture.g.cs"), FixtureFile(config));   // T-2.5: AddGenerated bootstrap + InMemory override
+        WriteAlways(Path.Combine(testsGen, "GlobalUsings.g.cs"), TestGlobalUsings(gm));   // T-2.5: entity/handler/Xunit tip çözümü
         // op-id → GmOperation: ASSERT (T-2.2) RunSequence op'larının Business.Effects + Access'ine bu map'le ulaşır.
         var opById = new Dictionary<string, GmOperation>(StringComparer.Ordinal);
         foreach (var o in gm.Operations) opById[o.Id] = o;
@@ -215,7 +219,7 @@ public static class DotnetEmitter
             if (!AllSinglePrereqs(prereqs)) return;   // Ambiguous/Missing → iskelet emit ETME (T-3.2 DUR-marker)
             var scopeDir = Path.Combine(testsGen, scope);
             Directory.CreateDirectory(scopeDir);      // WriteAlways dizin oluşturmaz → burada hazırla
-            WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById));
+            WriteAlways(Path.Combine(scopeDir, $"{name}.g.cs"), TestSkeleton(scope, name, runSeq, prereqs, writeSet, opById, gm));
             // ARRANGE human-seam (T-2.3): owned iskeletin DECLARE ettiği `partial void Arrange{name}()` gövdesi.
             // WriteIfAbsent → insan/LLM dolumu (M4 test-arrange) tekrar-üretimde EZİLMEZ. Yalnız ARRANGE; ASSERT owned'da.
             var seamScopeDir = Path.Combine(testsSrc, scope);
@@ -237,7 +241,7 @@ public static class DotnetEmitter
 
     // 3-faz owned xUnit iskeleti. `WriteAlways` GenHeader (auto-generated + #nullable) ekler → içerik using/namespace ile başlar.
     static string TestSkeleton(string scope, string name, IReadOnlyList<string> runSeq, IReadOnlyList<PrereqStep> prereqs,
-        IReadOnlyList<string> writeSet, IReadOnlyDictionary<string, GmOperation> opById)
+        IReadOnlyList<string> writeSet, IReadOnlyDictionary<string, GmOperation> opById, GenerationModel gm)
     {
         var sb = new StringBuilder();
         // ön-gereksinim çağrıları (yalnız Single creator op'lar; topo-sıra TestPlan'da korunur).
@@ -272,7 +276,7 @@ public static class DotnetEmitter
         sb.Append("\n");
         // 3) ASSERT — üreteç-sahibi, contract-çapalı (effects/access/throws). LLM yargısı YOK (anti-circularity §3d).
         sb.Append($"        // 3) ASSERT — contract-çapalı (üretilir; effects→field, access→varlık, throws→negatif).\n");
-        sb.Append(AssertBlock(runSeq, writeSet, opById));
+        sb.Append(AssertBlock(runSeq, writeSet, opById, gm));
         sb.Append($"    }}\n}}\n");
         return sb.ToString();
     }
@@ -303,8 +307,8 @@ public static class DotnetEmitter
     // net10.0 xUnit test SDK + App.csproj ProjectReference. Owned `tests/gen/**/*.g.cs` + seam `tests/src/**/*.Logic.cs`
     // SDK default-glob ile derlenir (proje kökü <out>/tests/ altındaki tüm *.cs). Versiyonlar tests/Gen.Tests ile eşleşir.
     // App.csproj <out>/App.csproj'ta → tests/'ten görece yol `../App.csproj`.
-    static string TestsCsproj() =>
-        """
+    static string TestsCsproj(GenConfig? config = null) =>
+        $$"""
         <Project Sdk="Microsoft.NET.Sdk">
 
           <PropertyGroup>
@@ -318,6 +322,7 @@ public static class DotnetEmitter
             <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
             <PackageReference Include="xunit" Version="2.9.3" />
             <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+            {{TestDbPackage(config)}}
           </ItemGroup>
 
           <ItemGroup>
@@ -326,6 +331,120 @@ public static class DotnetEmitter
 
         </Project>
         """;
+
+    // Üretilen Fixture harness'ının test EF provider'ı (proje-konfigürlenebilir; default InMemory = doğrulama varsayılanı).
+    static string TestProvider(GenConfig? config) => (config?.TestDbProvider ?? "inmemory").ToLowerInvariant();
+
+    // Test provider'ı → eşleşen EF NuGet paketi (versiyonlar gen/Generated.props ile aynı; default InMemory).
+    static string TestDbPackage(GenConfig? config) => TestProvider(config) switch
+    {
+        "sqlite" => "<PackageReference Include=\"Microsoft.EntityFrameworkCore.Sqlite\" Version=\"10.0.9\" />",
+        "postgres" => "<PackageReference Include=\"Npgsql.EntityFrameworkCore.PostgreSQL\" Version=\"10.0.2\" />",
+        "sqlserver" => "<PackageReference Include=\"Microsoft.EntityFrameworkCore.SqlServer\" Version=\"10.0.9\" />",
+        _ => "<PackageReference Include=\"Microsoft.EntityFrameworkCore.InMemory\" Version=\"10.0.9\" />"
+    };
+
+    // Test provider'ı → Fixture içindeki EF UseXxx çağrısı (her Build'te izole DB). InMemory: unique db-name → tam izolasyon.
+    // sqlite/postgres/sqlserver: bağlantı env'den (TEST_DB) ya da yerel default — derlenir; gerçek koşum proje-bazlı (T-5.2).
+    static string TestDbUseCall(GenConfig? config) => TestProvider(config) switch
+    {
+        "sqlite" => "o.UseSqlite($\"Data Source={Path.Combine(Path.GetTempPath(), \\\"apptest-\\\" + Guid.NewGuid().ToString(\\\"N\\\") + \\\".db\\\")}\")",
+        "postgres" => "o.UseNpgsql(Environment.GetEnvironmentVariable(\"TEST_DB\") ?? \"Host=localhost;Database=apptest\")",
+        "sqlserver" => "o.UseSqlServer(Environment.GetEnvironmentVariable(\"TEST_DB\") ?? \"Server=localhost;Database=apptest;Trusted_Connection=True;TrustServerCertificate=True\")",
+        _ => "o.UseInMemoryDatabase(\"apptest-\" + Guid.NewGuid().ToString(\"N\"))"
+    };
+
+    // ── Fixture execution harness (T-2.5): owned, kuvvetli-tipli (Tests App'i referans eder). conformance-pattern ──
+    // AddGenerated DI bootstrap → production DbContext (UseNpgsql seam) TEST provider'ıyla OVERRIDE (default InMemory) →
+    // scope/handler resolve → ExecuteAsync(request, ct) → Result; Get<TEntity> EF sorgusu. ASSERT TAŞIMAZ (owned test-sınıflarında).
+    // RunAsync<THandler>(request?): handler kuvvetli-tipli resolve; ExecuteAsync invoke (shared interface YOK → ortak çağrı reflection ile).
+    static string FixtureFile(GenConfig? config) =>
+        $$"""
+        using Microsoft.EntityFrameworkCore;
+        using Microsoft.Extensions.DependencyInjection;
+        using Microsoft.Extensions.DependencyInjection.Extensions;
+        using {{Root}};
+
+        namespace {{Root}}.Tests;
+
+        // owned test-execution harness (üreteç-sahibi; her run yenilenir). ASSERT içermez (asserts owned test-sınıflarında).
+        public static class Fixture
+        {
+            static ServiceProvider _provider = Build();
+            static readonly HashSet<string> _performed = new();
+            static readonly HashSet<string> _emitted = new();
+
+            // AddGenerated → production DbContext kaydını TEST provider'ıyla OVERRIDE et (izolasyon; postgres testte YOK).
+            static ServiceProvider Build()
+            {
+                var services = new ServiceCollection();
+                GeneratedBootstrap.AddGenerated(services);
+                services.RemoveAll<DbContextOptions<AppDbContext>>();
+                services.RemoveAll<DbContextOptions>();
+                services.RemoveAll<AppDbContext>();
+                services.AddDbContext<AppDbContext>(o => {{TestDbUseCall(config)}});
+                return services.BuildServiceProvider();
+            }
+
+            // 1) temiz data: yeni izole DB + çağrı/event izleri sıfırlanır.
+            public static async Task ResetAsync()
+            {
+                _performed.Clear();
+                _emitted.Clear();
+                await _provider.DisposeAsync();
+                _provider = Build();
+                using var scope = _provider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                await db.Database.EnsureCreatedAsync();
+            }
+
+            // handler resolve (kuvvetli-tipli) → ExecuteAsync(request, ct) → Result. request null ise default kur (ARRANGE doldurana dek).
+            public static async Task<object?> RunAsync<THandler>(object? request = null) where THandler : notnull
+            {
+                using var scope = _provider.CreateScope();
+                var handler = scope.ServiceProvider.GetRequiredService<THandler>();
+                var exec = typeof(THandler).GetMethod("ExecuteAsync")
+                    ?? throw new InvalidOperationException(typeof(THandler).Name + ".ExecuteAsync bulunamadı");
+                request ??= Instantiate(exec.GetParameters()[0].ParameterType);
+                _performed.Add(typeof(THandler).Name.Replace("Handler", ""));
+                var task = (Task)exec.Invoke(handler, new object?[] { request, CancellationToken.None })!;
+                await task.ConfigureAwait(false);
+                return task.GetType().GetProperty("Result")?.GetValue(task);
+            }
+
+            // assertion sorgusu: persist edilen entity (ilk kayıt).
+            public static TEntity Get<TEntity>() where TEntity : class
+            {
+                using var scope = _provider.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                return db.Set<TEntity>().AsNoTracking().FirstOrDefault()!;
+            }
+
+            // davranışsal iz (in-memory recorder): RunAsync çağrılan op adlarını kaydeder. send/event hook'u T-5.2'de derinleşir.
+            public static bool Performed(string opName) => _performed.Contains(opName);
+            public static bool Emitted(string eventName) => _emitted.Contains(eventName);
+
+            // request record'unu en-çok-param'lı ctor + default değerlerle kur (ARRANGE gerçek payload sağlayana dek).
+            static object Instantiate(Type t)
+            {
+                var ctor = t.GetConstructors().OrderByDescending(c => c.GetParameters().Length).First();
+                var args = ctor.GetParameters()
+                    .Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null)
+                    .ToArray();
+                return ctor.Invoke(args);
+            }
+        }
+
+        """;
+
+    // Test-projesi global using (owned): Xunit + App + her modül namespace'i → test sınıflarında entity/handler/enum çözülür.
+    static string TestGlobalUsings(GenerationModel gm)
+    {
+        var sb = new StringBuilder("global using Xunit;\n");
+        sb.Append($"global using {Root};\n");
+        foreach (var m in gm.Modules) sb.Append($"global using {Root}.{m.Name};\n");
+        return sb.ToString();
+    }
 
     // ── ASSERT üretimi (T-2.2): contract-türevli field-seviyesi assertion (LLM DEĞİL → anti-circularity §3d) ──
     // RunSequence op'larının Business.Effects'i + (taban) WriteSet/access'inden derlenir. ExprBuild ile değer render
@@ -337,7 +456,7 @@ public static class DotnetEmitter
     //   WriteSet entity'leri              → varlık tabanı (Kapı 0 access-authority); field/create ile örtüşen ATLANIR
     //   op.Throws                         → negatif yol yorum-anchor'ı (minimum; ayrı [Fact] yok — T-2.2 scope dışı)
     static string AssertBlock(IReadOnlyList<string> runSeq, IReadOnlyList<string> writeSet,
-        IReadOnlyDictionary<string, GmOperation> opById)
+        IReadOnlyDictionary<string, GmOperation> opById, GenerationModel gm)
     {
         var sb = new StringBuilder();
         var asserted = new HashSet<string>(StringComparer.Ordinal);   // varlık tabanı dedup (yalnız ordinal listeler gezilir)
@@ -351,9 +470,12 @@ public static class DotnetEmitter
                 switch (eff.Kind)
                 {
                     case "calculate" when TryEntityField(eff.Target, out var entity, out var field):
-                        var value = EffectValue(eff);
-                        if (value is null) { MarkExistence(sb, entity, asserted); break; }   // değersiz effect → varlık tabanına düş (graceful)
-                        sb.Append($"        Assert.Equal({value}, Fixture.Get<{entity}>().{Pascal(field)});\n");
+                        var (value, isConst) = EffectValueConst(eff);
+                        // değersiz VEYA runtime-ref'li (input.X gibi; test'te `input` yok) effect → varlık tabanına düş (graceful, derlenir).
+                        if (value is null || !isConst) { MarkExistence(sb, entity, asserted); break; }
+                        var rendered = RenderFieldValue(gm, entity, field, value);
+                        if (rendered is null) { MarkExistence(sb, entity, asserted); break; }   // enum literal eşleşmedi → varlık tabanı
+                        sb.Append($"        Assert.Equal({rendered}, Fixture.Get<{entity}>().{Pascal(field)});\n");
                         asserted.Add(entity);
                         break;
                     case "create" when TryEntity(eff.Target, out var created):
@@ -391,12 +513,46 @@ public static class DotnetEmitter
         sb.Append($"        Assert.NotNull(Fixture.Get<{entity}>());\n");
     }
 
-    // Effect değeri (C# ifadesi): Expr (ExprNode) varsa ExprBuild render'ı; yoksa Text literal'i; ikisi de yoksa null.
-    static string? EffectValue(ContractEffect eff)
+    // Effect değeri (C# ifadesi) + sabit-mi: Expr (ExprNode) varsa ExprBuild render'ı (Paths boş = derleme-sabiti;
+    // `input.X` gibi path-ref → IsConst=false, test'te çözülemez); yoksa Text literal'i (sabit); ikisi de yoksa (null,false).
+    static (string? Value, bool IsConst) EffectValueConst(ContractEffect eff)
     {
-        if (eff.Expr is not null) return Gen.Core.Predicate.ExprBuild.Build(eff.Expr).Expr;
-        if (eff.Text is not null) return TextLiteral(eff.Text);
-        return null;
+        if (eff.Expr is not null)
+        {
+            var built = Gen.Core.Predicate.ExprBuild.Build(eff.Expr);
+            return (built.Expr, built.Paths.Count == 0);   // path varsa runtime-ref (input.X) → test-context'te sabit değil
+        }
+        if (eff.Text is not null) return (TextLiteral(eff.Text), true);
+        return (null, false);
+    }
+
+    // Sabit literal'i hedef field tipine göre render et: field bir enum ise `EnumType.member` (string→enum uyumu);
+    // değilse değeri olduğu gibi (string/sayı). Enum üyesi eşleşmezse null (caller varlık tabanına düşer).
+    static string? RenderFieldValue(GenerationModel gm, string entity, string field, string value)
+    {
+        var enumType = EnumTypeOf(gm, entity, field);
+        if (enumType is null) return value;   // string/sayı field → literal olduğu gibi
+        var member = StripStringLiteral(value);
+        var et = gm.Types.FirstOrDefault(t => t.Id == enumType);
+        if (member is null || et?.Values is null || !et.Values.Contains(member)) return null;   // eşleşmedi → graceful
+        return $"{enumType}.{member}";
+    }
+
+    // entity.field bir enum ise enum tip adını döndür (gm.Types Kind=="enum"); değilse null.
+    static string? EnumTypeOf(GenerationModel gm, string entity, string field)
+    {
+        var e = gm.Entities.FirstOrDefault(x => x.Id == entity);
+        var f = e?.Fields.FirstOrDefault(x => string.Equals(x.Name, field, StringComparison.OrdinalIgnoreCase));
+        if (f is null) return null;
+        var t = gm.Types.FirstOrDefault(x => x.Id == f.Type && x.Kind == "enum");
+        return t?.Id;
+    }
+
+    // C# string literal (`"iptal"`) → ham içerik (`iptal`); string literal değilse null (enum üyesine eşlenemez).
+    static string? StripStringLiteral(string value)
+    {
+        var t = value.Trim();
+        return t.Length >= 2 && t[0] == '"' && t[^1] == '"' ? t[1..^1] : null;
     }
 
     // Ham text'i ('iptal' tek-tırnaklı veya düz) güvenli C# string literal'ine çevir (Expr yoksa fallback; nadir).

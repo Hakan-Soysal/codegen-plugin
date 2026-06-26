@@ -795,9 +795,101 @@ ls <out>/tests/src/Process/TakvimSureci.Logic.cs   # mevcut
 
 **DoD:**
 - [ ] `dotnet run --project src/Gen.Cli -- <manifest> <out>` sonrası `<out>/tests/Tests.csproj` var.
-- [ ] `dotnet build <out>/tests/Tests.csproj` exit 0 (seam stub'larla derlenir).
+- [ ] csproj iyi-biçimli: restore olur, `../App.csproj`'u referans eder, xunit paketleri var. (Tam build → T-2.5'ten sonra T-5.1.)
+- [ ] App.csproj `tests/**`'i EXCLUDE eder (over-glob fix; App test dosyalarını derlemez).
 - [ ] WriteIfAbsent: tekrar üretimde ezilmiyor.
-- [ ] Manuel: csproj App'i referans ediyor + xunit paketleri var.
+
+---
+
+## 🔴 T-2.5 — Fixture test-execution harness (üreteç-emit, conformance-pattern, configurable EF provider)
+
+### 1. Goal
+Üretilen xUnit testlerinin çağırdığı **`Fixture` execution harness**'ını üreteç-emit et (owned), conformance
+adapter desenini izleyerek: `AddGenerated` ile DI bootstrap → handler resolve → `ExecuteAsync` → EF `Get<Entity>`.
+EF provider **proje-konfigürlenebilir** (default InMemory). Ayrıca test-projesi `GlobalUsings.g.cs` emit et
+(entity/handler tipleri çözülsün) ve Tests.csproj'a provider paketini ekle. Bu, test projesini **derlenebilir** kılar.
+
+### 2. Why
+Uyumluluk gap (kullanıcı kararı 2026-06-26): owned skeleton `Fixture.ResetAsync/RunAsync<{Op}Handler>/Get<{Entity}>/
+Performed/Emitted` çağırıyor ama harness'ı hiçbir task emit etmiyordu. Karar: **üreteç-emit, conformance-pattern**;
+**EF provider proje-bazında konfigürlenebilir, üretimden önce kullanıcıya sorulur** (default InMemory). Q2-bağımsız:
+xUnit harness conformance adapter'ından AYRI ama aynı execution desenini izler.
+
+### 3. Inputs (TAM oku)
+- `conformance-adapter/GeneratedApp.cs` — REFERENCE EXECUTION PATTERN: `{rootNs}.GeneratedBootstrap.AddGenerated(services)`
+  → ServiceProvider → handler resolve (`{rootNs}.{module}.{opId}Handler`) → ExecuteAsync. **NOT:** GeneratedApp reflection
+  kullanır çünkü App'i compile-time referans ETMEZ; bizim Tests.csproj `../App.csproj`'u REFERANS EDER → harness
+  **kuvvetli-tipli** olabilir (reflection gereksiz): `AddGenerated` doğrudan çağrılır, handler/entity tipleri doğrudan kullanılır.
+- `conformance-adapter/Tests/AppFixture.cs` — fixture-scaffolding deseni (emit/build/temp).
+- `src/Gen.Dotnet/DotnetEmitter.cs` — EmitTests (skeleton'ın Fixture API çağrı şekli: `Fixture.RunAsync<{Op}Handler>()`,
+  `Arrange{Name}()`), Csproj()/TestsCsproj() helper'ları, GlobalUsings(gm) helper'ı (App tarafı — test tarafı için örnek),
+  Bootstrap.g.cs/AppDbContext emisyonu (AddGenerated + UseNpgsql("Default") — testte InMemory ile OVERRIDE edilecek).
+- `src/Gen.Core/Gm/GenerationModel.cs` (handler/entity adlandırma), `src/Gen.Dotnet/GenConfig.cs` (config knob deseni — DbProvider).
+- tasarım §3c/§8.
+
+### 4. Pre-conditions
+```bash
+cd "/Users/hakansoysal/Desktop/ClaudeCode Denemeler/CoreTemplate1"
+grep -q "EmitTests" src/Gen.Dotnet/DotnetEmitter.cs   # T-2.1..2.4 done
+grep -q "TestsCsproj" src/Gen.Dotnet/DotnetEmitter.cs
+dotnet build Gen.slnx   # exit 0
+test -f conformance-adapter/GeneratedApp.cs           # reference pattern present
+```
+
+### 5. Changes (src/Gen.Dotnet/DotnetEmitter.cs)
+#### Step 5.1 — Fixture harness (owned)
+EmitTests'e owned `WriteAlways(tests/gen/Fixture.g.cs)` ekle. `Fixture` (kuvvetli-tipli, App referanslı):
+- DI bootstrap: `var services = new ServiceCollection(); App.GeneratedBootstrap.AddGenerated(services);` **sonra EF
+  DbContext kaydını TEST provider'ıyla OVERRIDE et** (default InMemory: `RemoveAll<DbContextOptions<AppDbContext>>` +
+  `AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase(uniqueName))`). Provider seçimi config'ten (Step 5.3).
+- `ResetAsync()`: yeni izole DB (InMemory'de yeni db-name / EnsureDeleted+EnsureCreated).
+- `RunAsync<THandler>(request)`: scope aç, `THandler` resolve, `ExecuteAsync(request, ct)` çağır, Result döndür.
+- `Get<TEntity>()`: DbContext'ten sorgula (assertion'lar için).
+- `Performed(opName)`/`Emitted(eventName)`: kaydedilen çağrı/event izi (basit in-memory recorder; gerçek hook varsa ona bağla).
+- **API-uzlaştırma:** skeleton'ın `Arrange{Name}()` + `RunAsync<{Op}Handler>()` çağrı şekliyle TUTARLI olmalı. ARRANGE
+  request payload'larını üretmeli ve RunAsync onları handler'a geçirmeli. Gerekirse EmitTests skeleton'ın çağrı şeklini
+  (Arrange → request, RunAsync<THandler>(request)) bu task'ta NETLEŞTİR (aynı dosya; skeleton+harness contract'ı bir bütün).
+#### Step 5.2 — Test GlobalUsings (owned)
+`WriteAlways(tests/gen/GlobalUsings.g.cs)`: `global using Xunit; global using App; global using App.{Module}…;`
+(test sınıflarında entity/handler tipleri çözülsün; App tarafı `GlobalUsings(gm)` deseninden türet — modülleri gez).
+#### Step 5.3 — Provider config knob
+EF test provider'ı config'ten oku (default InMemory). `GenConfig`'e `TestDbProvider` (InMemory|Sqlite|Postgres) ekle
+ya da mevcut config kanalını kullan; default InMemory. TestsCsproj()'a seçilen provider paketini ekle
+(InMemory → `Microsoft.EntityFrameworkCore.InMemory`). **Provider proje-bazında değişir; üretimden önce elicit edilir
+(sessiz default YOK — ama harness'ın kendi doğrulaması için InMemory varsayılır).**
+
+### 6. Acceptance tests
+#### 6.1 Emitter compiles
+`dotnet build Gen.slnx` → exit 0.
+#### 6.2 Test projesi DERLENİR (asıl kanıt)
+Generator'ı committed fixture'a çalıştır (scratchpad): `DOTNET_JsonSerializerIsReflectionEnabledByDefault=true dotnet run
+--project src/Gen.Cli --no-build -- tests/fixtures/studyo.manifest.json <out>` → sonra `dotnet build <out>/tests/Tests.csproj`
+**exit 0** (Fixture + GlobalUsings + InMemory provider ile artık derlenir; Fixture/Assert/entity/handler sembolleri çözülür).
+ARRANGE seam'leri `doldurulacak` stub gövdeli ama parametresiz partial void olduğundan derlenir.
+#### 6.3 Determinizm + sahiplik
+owned `tests/gen/Fixture.g.cs` + `GlobalUsings.g.cs` provenance'ta Generated; iki run byte-aynı. Fixture'da ASSERT YOK
+(o test-sınıflarında). Scratchpad sil.
+
+### 7. Out of scope
+- ARRANGE gövdesini doldurma (LLM/M4). Conformance adapter'ını DEĞİŞTİRME (ayrı katman). Gerçek test RUN'u yeşili = T-5.2.
+
+### 8. Anti-patterns
+- Reflection-tabanlı GeneratedApp'ı kopyalama → Tests App'i referans eder, kuvvetli-tipli yaz.
+- Production DbContext (postgres) testte kullanma → provider override (InMemory default).
+- Fixture'a ASSERT koyma. Harness'ı WriteIfAbsent yapma → owned WriteAlways (regenerated).
+- Provider'ı sessiz hardcode → konfigürlenebilir (default InMemory, elicit edilir).
+
+### 9. Definition of Done
+- [ ] `tests/gen/Fixture.g.cs` (owned) emit ediliyor: AddGenerated bootstrap + InMemory override + ResetAsync/RunAsync<THandler>(request)/Get<TEntity>/Performed/Emitted.
+- [ ] `tests/gen/GlobalUsings.g.cs` (owned) emit ediliyor; entity/handler tipleri çözülüyor.
+- [ ] TestsCsproj provider paketini (InMemory) içeriyor.
+- [ ] 6.2: `dotnet build <out>/tests/Tests.csproj` exit 0.
+- [ ] skeleton↔harness API tutarlı (Arrange→request→RunAsync<THandler>(request)).
+- [ ] owned Fixture/GlobalUsings provenance Generated; iki run byte-aynı; Fixture'da Assert yok.
+- [ ] `git diff --stat` yalnız `src/Gen.Dotnet/DotnetEmitter.cs` (+ gerekirse `src/Gen.Dotnet/GenConfig.cs`).
+
+### 10. Self-check
+1. Test projesi gerçekten `dotnet build` exit 0 mu (gözümle)? 2. Fixture kuvvetli-tipli mi (reflection değil)? 3. InMemory override var mı (postgres testte yok)? 4. skeleton RunAsync<THandler>(request) ile Arrange uyumlu mu? 5. Fixture owned WriteAlways + Assert yok mu?
 
 ---
 
