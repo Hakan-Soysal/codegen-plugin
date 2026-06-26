@@ -354,14 +354,25 @@ public static class DotnetEmitter
         _ => "<PackageReference Include=\"Microsoft.EntityFrameworkCore.InMemory\" Version=\"10.0.9\" />"
     };
 
-    // Test provider'ı → Fixture içindeki EF UseXxx çağrısı (her Build'te izole DB). InMemory: unique db-name → tam izolasyon.
-    // sqlite/postgres/sqlserver: bağlantı env'den (TEST_DB) ya da yerel default — derlenir; gerçek koşum proje-bazlı (T-5.2).
+    // Test DB-adı: Build() başına BİR kez hesaplanır (stable-per-test) + Guid runtime (unique-per-test). Lambda bu yerel'i
+    // CAPTURE eder → AddDbContext options'ı her scope'ta yeniden koşsa da TÜM scope'lar (prereq/run/assert) AYNI DB'yi paylaşır.
+    // ResetAsync her testte Build()'i yeniden çağırdığı için yeni Guid → testler arası izolasyon korunur. Guid emit-time DEĞİL (deterministik metin).
+    // postgres/sqlserver: sabit bağlantı (env TEST_DB / yerel default) — runtime db-adı YOK, decl boş.
+    static string TestDbDecl(GenConfig? config) => TestProvider(config) switch
+    {
+        "sqlite" => "var dbName = Path.Combine(Path.GetTempPath(), \"apptest-\" + Guid.NewGuid().ToString(\"N\") + \".db\");\n        ",
+        "postgres" => "",
+        "sqlserver" => "",
+        _ => "var dbName = \"apptest-\" + Guid.NewGuid().ToString(\"N\");\n        "
+    };
+
+    // Test provider'ı → Fixture içindeki EF UseXxx çağrısı. inmemory/sqlite: TestDbDecl'in ürettiği sabit dbName'i CAPTURE eder.
     static string TestDbUseCall(GenConfig? config) => TestProvider(config) switch
     {
-        "sqlite" => "o.UseSqlite($\"Data Source={Path.Combine(Path.GetTempPath(), \\\"apptest-\\\" + Guid.NewGuid().ToString(\\\"N\\\") + \\\".db\\\")}\")",
+        "sqlite" => "o.UseSqlite($\"Data Source={dbName}\")",
         "postgres" => "o.UseNpgsql(Environment.GetEnvironmentVariable(\"TEST_DB\") ?? \"Host=localhost;Database=apptest\")",
         "sqlserver" => "o.UseSqlServer(Environment.GetEnvironmentVariable(\"TEST_DB\") ?? \"Server=localhost;Database=apptest;Trusted_Connection=True;TrustServerCertificate=True\")",
-        _ => "o.UseInMemoryDatabase(\"apptest-\" + Guid.NewGuid().ToString(\"N\"))"
+        _ => "o.UseInMemoryDatabase(dbName)"
     };
 
     // ── Fixture execution harness (T-2.5): owned, kuvvetli-tipli (Tests App'i referans eder). conformance-pattern ──
@@ -392,7 +403,7 @@ public static class DotnetEmitter
                 services.RemoveAll<DbContextOptions<AppDbContext>>();
                 services.RemoveAll<DbContextOptions>();
                 services.RemoveAll<AppDbContext>();
-                services.AddDbContext<AppDbContext>(o => {{TestDbUseCall(config)}});
+                {{TestDbDecl(config)}}services.AddDbContext<AppDbContext>(o => {{TestDbUseCall(config)}});
                 return services.BuildServiceProvider();
             }
 
